@@ -324,7 +324,8 @@ void W_Precache()
 	// hornetgun
 	UTIL_PrecacheOtherWeapon("weapon_hornetgun");
 
-	if (g_pGameRules->IsDeathmatch())
+	// PS2HLU
+	if (g_pGameRules->IsMultiplayer())
 	{
 		UTIL_PrecacheOther("weaponbox"); // container for dropped deathmatch weapons
 	}
@@ -1087,6 +1088,7 @@ TYPEDESCRIPTION CWeaponBox::m_SaveData[] =
 		DEFINE_ARRAY(CWeaponBox, m_rgiszAmmo, FIELD_STRING, MAX_AMMO_SLOTS),
 		DEFINE_ARRAY(CWeaponBox, m_rgpPlayerItems, FIELD_CLASSPTR, MAX_ITEM_TYPES),
 		DEFINE_FIELD(CWeaponBox, m_cAmmoTypes, FIELD_INTEGER),
+		DEFINE_FIELD(CWeaponBox, m_iNumBatteries, FIELD_INTEGER),
 };
 
 IMPLEMENT_SAVERESTORE(CWeaponBox, CBaseEntity);
@@ -1114,7 +1116,13 @@ bool CWeaponBox::KeyValue(KeyValueData* pkvd)
 	// PS2HLU
 	else if (FStrEq(pkvd->szKeyName, "player_index"))
 	{
-		m_decayIndex = atof(pkvd->szValue);
+		m_decayIndex = atoi(pkvd->szValue);
+		return true;
+	}
+	// PS2HLU
+	else if (FStrEq(pkvd->szKeyName, "batteries"))
+	{
+		m_iNumBatteries = atoi(pkvd->szValue);
 		return true;
 	}
 	else
@@ -1212,6 +1220,12 @@ void CWeaponBox::Touch(CBaseEntity* pOther)
 			m_rgiszAmmo[i] = iStringNull;
 			m_rgAmmo[i] = 0;
 		}
+	}
+
+	// PS2HLU
+	for (i = 0; i < m_iNumBatteries; i++)
+	{
+		pPlayer->GiveNamedItem("item_battery");
 	}
 
 	// go through my weapons and try to give the usable ones to the player.
