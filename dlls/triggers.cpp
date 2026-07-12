@@ -636,6 +636,12 @@ bool CBaseTrigger::KeyValue(KeyValueData* pkvd)
 		m_bitsDamageInflict = atoi(pkvd->szValue);
 		return true;
 	}
+	// PS2HLU
+	else if (FStrEq(pkvd->szKeyName, "player_index"))
+	{
+		m_decayIndex = atoi(pkvd->szValue);
+		return true;
+	}
 
 	return CBaseToggle::KeyValue(pkvd);
 }
@@ -1217,21 +1223,21 @@ void CTriggerOnce::Spawn()
 void CBaseTrigger::MultiTouch(CBaseEntity* pOther)
 {
 	entvars_t* pevToucher;
-	CBaseEntity* pList[2];
+	CBaseEntity* pList[16];
 
 	pevToucher = pOther->pev;
 
 	// PS2HLU
 	// Finally got the trigggers to work!
-	// Spawnflag 512 is still a mystery to me, it isnt even used in the decay campaign anywhere
-	// but it changes the variable thats checked in spawnflag 256 to be zero, ill still have to figure that out
-	if ((pev->spawnflags & 0x200) == 0)
+	const int sf = pev->spawnflags;
+	
+	if ((sf & SF_TRIGGER_ONEPLAYER) == 0)
 	{
-		if ((pev->spawnflags & 0x100) == 0)
+		if ((sf & SF_TRIGGER_BOTHPLAYERS) == 0)
 		{
 			// Only touch clients, monsters, or pushables (depending on flags)
-			if (((pevToucher->flags & FL_CLIENT) != 0 && (pev->spawnflags & SF_TRIGGER_NOCLIENTS) == 0) ||
-				((pevToucher->flags & FL_MONSTER) != 0 && (pev->spawnflags & SF_TRIGGER_ALLOWMONSTERS) != 0) ||
+			if (((pevToucher->flags & FL_CLIENT) != 0 && (sf & SF_TRIGGER_NOCLIENTS) == 0) ||
+				((pevToucher->flags & FL_MONSTER) != 0 && (sf & SF_TRIGGER_ALLOWMONSTERS) != 0) ||
 				(pev->spawnflags & SF_TRIGGER_PUSHABLES) != 0 && FClassnameIs(pevToucher, "func_pushable"))
 			{
 
@@ -1248,15 +1254,30 @@ void CBaseTrigger::MultiTouch(CBaseEntity* pOther)
 				ActivateMultiTrigger(pOther);
 			}
 		}
+			if (m_decayIndex == 0)
+			{
+				const int numPlayersInTrigger = UTIL_EntitiesInBox(pList, 2, pev->mins, pev->maxs, FL_CLIENT);
 
-		// if (pev->absmax.x == 0) // theres a check here, but im pretty sure ive got entvars messed up in ghidra
-		{
-			int numPlayersInTrigger = UTIL_EntitiesInBox(pList, 2, pev->absmin, pev->absmax, FL_CLIENT);
-
-			if (numPlayersInTrigger == 2)
-				ActivateMultiTrigger(pOther);
-		}
+				if (numPlayersInTrigger == 2)
+					ActivateMultiTrigger(pOther);
+			}
 	}
+	else
+	{
+		if (m_decayIndex == 0)
+			return;
+
+		const int numPlayersInTrigger = UTIL_EntitiesInBox(pList, 2, pev->mins, pev->maxs, FL_CLIENT);
+
+		if ((numPlayersInTrigger > 1) == 0)
+			ActivateMultiTrigger(pOther);
+	}
+
+	// PS2HLU
+	// This is absolutely devious
+	if (m_decayIndex)
+		if (m_decayIndex == pOther->m_decayIndex)
+			ActivateMultiTrigger(pOther);
 }
 
 
@@ -1269,6 +1290,11 @@ void CBaseTrigger::ActivateMultiTrigger(CBaseEntity* pActivator)
 {
 	if (pev->nextthink > gpGlobals->time)
 		return; // still waiting for reset time
+
+	// PS2HLU
+	// How did gearbox even achieve this?
+	if (!pActivator)
+		ALERT(at_warning, "Activate Multi Trigger activator is NULL!\n");
 
 	if (!UTIL_IsMasterTriggered(m_sMaster, pActivator))
 		return;

@@ -449,6 +449,9 @@ inline DLL_GLOBAL int g_Language;
 #define SF_TRIGGER_ALLOWMONSTERS 1 // monsters allowed to fire this trigger
 #define SF_TRIGGER_NOCLIENTS 2	   // players not allowed to fire this trigger
 #define SF_TRIGGER_PUSHABLES 4	   // only pushables can fire this trigger
+// PS2HLU
+#define SF_TRIGGER_BOTHPLAYERS 0x100
+#define SF_TRIGGER_ONEPLAYER 0x200 // I don't think this is used ANYWHERE in Decay
 
 // func breakable
 #define SF_BREAK_TRIGGER_ONLY 1 // may only be broken by trigger
