@@ -29,7 +29,7 @@ ifeq "$(COMPILER)" ""
 endif
 
 CPLUS="$(COMPILER) -m32"
-CPP_LIB:=-L$(shell g++ -m32 -print-file-name=libstdc++.so | xargs dirname) -lstdc++ -ldl -lpthread -static-libstdc++ -static-libgcc
+CPP_LIB:=-L$(shell $(COMPILER) -m32 -print-file-name=libstdc++.so | xargs dirname) -lstdc++ -ldl -lpthread -static-libstdc++ -static-libgcc
 
 ARCH_CFLAGS=-march=pentium-m -mfpmath=387 -mno-sse
 
@@ -54,9 +54,9 @@ endif
 SHLIBEXT=so
 SHLIBCFLAGS=
 ifeq "$(CFG)" "release"
-	SHLIBLDFLAGS="-shared -Wl,-Map,$@_map.txt"
+	SHLIBLDFLAGS="-shared -Wl,-Map,$@_map.txt -Wl,--no-undefined"
 else
-	SHLIBLDFLAGS="-shared -gdwarf-2 -g2 -Wl,-Map,$@_map.txt"
+	SHLIBLDFLAGS="-shared -gdwarf-2 -g2 -Wl,-Map,$@_map.txt -Wl,--no-undefined"
 endif
 
 AR=ar
