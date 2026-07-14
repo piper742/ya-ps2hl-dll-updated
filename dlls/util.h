@@ -462,7 +462,10 @@ inline DLL_GLOBAL int g_Language;
 // func_pushable (it's also func_breakable, so don't collide with those flags)
 #define SF_PUSH_BREAKABLE 128
 
+// lights.cpp
+// PS2HLU added elight flag
 #define SF_LIGHT_START_OFF 1
+#define SF_LIGHT_ELIGHT 2
 
 #define SPAWNFLAG_NOMESSAGE 1
 #define SPAWNFLAG_NOTOUCH 1
