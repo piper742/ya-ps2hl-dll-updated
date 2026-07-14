@@ -46,14 +46,25 @@ static bool pm_shared_initialized = false;
 // PS2HLU
 // This is a kinda ugly hack, but since the engine overwrites
 // pmove every frame you can't quite just forcefully hold down a button
-// in a cleaner way
-bool force_crouch = false;
-double dLastJumpTime = DBL_MAX;
+// in a cleaner way.
+// It got even more ugly, since I forgot to account for multiplayer, so I
+// have resorted to this solution that's also present in Quake
 
-inline void resetCrouchHack()
+struct PlayerHackData {
+	bool force_crouch = false;
+	double dLastJumpTime = DBL_MAX;
+} PlayerHackData_s;
+
+// Have extra hacked-in data available for all potential clients (32)
+// This will break if Valve ever decides to bump the GoldSRC max player
+// count which isn't realistic. Too bad a cleaner solution can't be done
+// for something like this
+struct PlayerHackData extrahackdata[32] = {};
+
+inline void resetCrouchHack(int index)
 {
-	force_crouch = false;
-	dLastJumpTime = DBL_MAX;
+	extrahackdata[index].force_crouch = false;
+	extrahackdata[index].dLastJumpTime = DBL_MAX;
 }
 
 #pragma warning(disable : 4305)
@@ -2086,7 +2097,7 @@ void PM_Duck()
 	//bool duckpressed = (nButtonPressed & IN_DUCK) != 0;
 
 	// PS2HLU
-	if (force_crouch)
+	if (extrahackdata[pmove->player_index].force_crouch)
 	{
 		pmove->cmd.buttons |= IN_DUCK;
 		pmove->flags |= FL_DUCKING;
@@ -2661,6 +2672,7 @@ void PM_Jump()
 		return;
 	}
 
+
 	// PS2HLU
 	// Crouch jump
 	// The second bit of iuser4 must be checked
@@ -2668,13 +2680,13 @@ void PM_Jump()
 	if (pmove->iuser4 & 2)
 	{
 		//pmove->Con_DPrintf("Forcing duck! bInDuck: %s\n", pmove->bInDuck ? "true" : "false");
-		if (pmove->Sys_FloatTime() - dLastJumpTime > 0.2f)
+		if (pmove->Sys_FloatTime() - extrahackdata[pmove->player_index].dLastJumpTime > 0.2f)
 		{
 			//pmove->Con_Printf("Now ducking!\n");
 			//pmove->Con_Printf("DuckTime: %f\n", (pmove->Sys_FloatTime() - dLastJumpTime));
 
 			// HORRIBLE HACK
-			force_crouch = true;
+			extrahackdata[pmove->player_index].force_crouch = true;
 		}
 	}
 
@@ -2697,7 +2709,10 @@ void PM_Jump()
 	// PS2HLU
 	// Use in engine timer instead of host's timer
 	// Original code uses gpGlobals's time
-	dLastJumpTime = pmove->Sys_FloatTime();
+	// For now only use this if we've got crouch jumping enabled
+	// TODO: Can we reuse this for airborne longjump activation?
+	if (pmove->iuser4 & 2)
+		extrahackdata[pmove->player_index].dLastJumpTime = pmove->Sys_FloatTime();
 
 	PM_PreventMegaBunnyJumping();
 
@@ -3217,7 +3232,7 @@ void PM_PlayerMove(qboolean server)
 		else
 		{
 			pmove->oldbuttons &= ~IN_JUMP;
-			resetCrouchHack(); // PS2HLU
+			resetCrouchHack(pmove->player_index); // PS2HLU
 		}
 
 		// Perform the move accounting for any base velocity.
@@ -3266,7 +3281,7 @@ void PM_PlayerMove(qboolean server)
 			else
 			{
 				pmove->oldbuttons &= ~IN_JUMP;
-				resetCrouchHack(); // PS2HLU
+				resetCrouchHack(pmove->player_index); // PS2HLU
 			}
 
 			// Perform regular water movement
@@ -3292,7 +3307,7 @@ void PM_PlayerMove(qboolean server)
 			else
 			{
 				pmove->oldbuttons &= ~IN_JUMP;
-				resetCrouchHack(); // PS2HLU
+				resetCrouchHack(pmove->player_index); // PS2HLU
 			}
 
 			// Fricion is handled before we add in any base velocity. That way, if we are on a conveyor,
