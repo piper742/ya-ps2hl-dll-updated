@@ -204,6 +204,7 @@ public:
 	float FlPlayerSpawnTime(CBasePlayer* pPlayer) override;
 
 	bool AllowAutoTargetCrosshair() override;
+	void ClientUserInfoChanged(CBasePlayer* pPlayer, char* infobuffer) override;
 
 	// Client kills/scoring
 	int IPointsForKill(CBasePlayer* pAttacker, CBasePlayer* pKilled) override;
@@ -408,6 +409,7 @@ public:
 
 	virtual bool AllowAutoTargetCrosshair(void);
 	virtual bool ClientCommand(CBasePlayer* pPlayer, const char* pcmd);
+	void ClientUserInfoChanged(CBasePlayer* pPlayer, char* infobuffer) override;
 
 	// Client kills/scoring
 	virtual int IPointsForKill(CBasePlayer* pAttacker, CBasePlayer* pKilled);

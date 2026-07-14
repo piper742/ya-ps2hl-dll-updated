@@ -95,6 +95,9 @@ cvar_t* cl_rollspeed = nullptr;
 cvar_t* cl_bobtilt = nullptr;
 cvar_t* r_decals = nullptr;
 
+// PS2HLU
+cvar_t* cl_cjump_style = nullptr;
+
 void ShutdownInput();
 
 //DECLARE_MESSAGE(m_Logo, Logo)
@@ -548,6 +551,8 @@ void CHud::Init()
 
 	// PS2HLU
 	m_pCvarCrosshair = gEngfuncs.pfnGetCvarPointer("crosshair");
+	cl_cjump_style = CVAR_CREATE("cl_cjump_style", "1", FCVAR_ARCHIVE | FCVAR_USERINFO);
+	//CVAR_CREATE("cl_crouch_toggle", "0", FCVAR_ARCHIVE | FCVAR_USERINFO); // TODO
 
 	m_pSpriteList = NULL;
 

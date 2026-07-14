@@ -136,6 +136,12 @@ bool CHalfLifeRules::AllowAutoTargetCrosshair()
 	return true;
 }
 
+// Did I accidentally forget about this?
+void CHalfLifeRules::ClientUserInfoChanged(CBasePlayer* pPlayer, char* infobuffer)
+{
+	pPlayer->SetPrefsFromUserinfo(infobuffer);
+}
+
 //=========================================================
 //=========================================================
 void CHalfLifeRules::PlayerThink(CBasePlayer* pPlayer)

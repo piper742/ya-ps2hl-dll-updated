@@ -571,6 +571,12 @@ bool CHalfLifeCoop::AllowAutoTargetCrosshair(void)
 	return true;
 }
 
+void CHalfLifeCoop::ClientUserInfoChanged(CBasePlayer* pPlayer, char* infobuffer)
+{
+	// TODO: Do we need the SetPlayerModel call here?
+	pPlayer->SetPrefsFromUserinfo(infobuffer);
+}
+
 //=========================================================
 // IPointsForKill - how many points awarded to anyone
 // that kills this player?

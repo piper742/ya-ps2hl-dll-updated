@@ -5020,6 +5020,23 @@ void CBasePlayer::SetPrefsFromUserinfo(char* infobuffer)
 	{
 		m_iAutoWepSwitch = 1;
 	}
+
+	// PS2HLU
+	const char* value2 = g_engfuncs.pfnInfoKeyValue(infobuffer, "cl_cjump_style");
+	bool iscjumpon = false;
+	
+	if ('\0' != *value2)
+		iscjumpon = static_cast<bool>(atoi(value2));
+
+	if (iscjumpon)
+	{
+		pev->iuser4 |= 2;
+	}
+	else
+	{
+		pev->iuser4 &= ~2;
+	}
+	// TODO: Crouch toggle
 }
 
 //=========================================================

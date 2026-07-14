@@ -30,6 +30,10 @@
 #include <stdlib.h> // atoi
 #include <ctype.h>	// isspace
 
+// PS2HLU
+// Really hope this doesn't cause any problems...
+#include <float.h>
+
 #ifdef CLIENT_DLL
 // Spectator Mode
 bool iJumpSpectator;
@@ -38,6 +42,19 @@ float vJumpAngles[3];
 #endif
 
 static bool pm_shared_initialized = false;
+
+// PS2HLU
+// This is a kinda ugly hack, but since the engine overwrites
+// pmove every frame you can't quite just forcefully hold down a button
+// in a cleaner way
+bool force_crouch = false;
+double dLastJumpTime = DBL_MAX;
+
+inline void resetCrouchHack()
+{
+	force_crouch = false;
+	dLastJumpTime = DBL_MAX;
+}
 
 #pragma warning(disable : 4305)
 
@@ -2062,8 +2079,25 @@ void PM_Duck()
 	int buttonsChanged = (pmove->oldbuttons ^ pmove->cmd.buttons); // These buttons have changed this frame
 	int nButtonPressed = buttonsChanged & pmove->cmd.buttons;	   // The changed ones still down are "pressed"
 
-	bool duckchange = (buttonsChanged & IN_DUCK) != 0;
-	bool duckpressed = (nButtonPressed & IN_DUCK) != 0;
+	// PS2HLU
+	// This is misleading! Not used anywhere!
+
+	//bool duckchange = (buttonsChanged & IN_DUCK) != 0;
+	//bool duckpressed = (nButtonPressed & IN_DUCK) != 0;
+
+	// PS2HLU
+	if (force_crouch)
+	{
+		pmove->cmd.buttons |= IN_DUCK;
+		pmove->flags |= FL_DUCKING;
+
+		// This forces instant ducking like real crouch jumping behavior. We could technically
+		// have it only get set on the server and it could maybe allow for visually smooth
+		// ducking on the client while maintaining correct hull size on the server.
+		// Let's maintain parity with PS2HL/Retail to make it obvious we're crouch jumping,
+		// should help not confuse new players, even if the visual jump is jarring
+		pmove->bInDuck = true;
+	}
 
 	if ((pmove->cmd.buttons & IN_DUCK) != 0)
 	{
@@ -2627,6 +2661,23 @@ void PM_Jump()
 		return;
 	}
 
+	// PS2HLU
+	// Crouch jump
+	// The second bit of iuser4 must be checked
+	// This is kinda hacky, but this might be the best possible method to actually handle this
+	if (pmove->iuser4 & 2)
+	{
+		//pmove->Con_DPrintf("Forcing duck! bInDuck: %s\n", pmove->bInDuck ? "true" : "false");
+		if (pmove->Sys_FloatTime() - dLastJumpTime > 0.2f)
+		{
+			//pmove->Con_Printf("Now ducking!\n");
+			//pmove->Con_Printf("DuckTime: %f\n", (pmove->Sys_FloatTime() - dLastJumpTime));
+
+			// HORRIBLE HACK
+			force_crouch = true;
+		}
+	}
+
 	// No more effect
 	if (pmove->onground == -1)
 	{
@@ -2642,6 +2693,11 @@ void PM_Jump()
 
 	// In the air now.
 	pmove->onground = -1;
+
+	// PS2HLU
+	// Use in engine timer instead of host's timer
+	// Original code uses gpGlobals's time
+	dLastJumpTime = pmove->Sys_FloatTime();
 
 	PM_PreventMegaBunnyJumping();
 
@@ -3161,6 +3217,7 @@ void PM_PlayerMove(qboolean server)
 		else
 		{
 			pmove->oldbuttons &= ~IN_JUMP;
+			resetCrouchHack(); // PS2HLU
 		}
 
 		// Perform the move accounting for any base velocity.
@@ -3209,6 +3266,7 @@ void PM_PlayerMove(qboolean server)
 			else
 			{
 				pmove->oldbuttons &= ~IN_JUMP;
+				resetCrouchHack(); // PS2HLU
 			}
 
 			// Perform regular water movement
@@ -3234,6 +3292,7 @@ void PM_PlayerMove(qboolean server)
 			else
 			{
 				pmove->oldbuttons &= ~IN_JUMP;
+				resetCrouchHack(); // PS2HLU
 			}
 
 			// Fricion is handled before we add in any base velocity. That way, if we are on a conveyor,

@@ -31,6 +31,8 @@ void stub_SetModel(struct edict_s* e, const char* m);
 
 
 extern cvar_t* cl_lw;
+// PS2HLU
+extern cvar_t* cl_cjump_style;
 
 extern bool g_runfuncs;
 extern Vector v_angles;
