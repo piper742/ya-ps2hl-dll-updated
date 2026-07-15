@@ -6,7 +6,7 @@
 //================================
 
 // Link entity to class
-LINK_ENTITY_TO_CLASS(item_recharge_glass, CChargerGlass);
+LINK_ENTITY_TO_CLASS(item_rechargefield, CChargerGlass);
 
 void CChargerGlass::Precache(void)
 {
@@ -22,8 +22,11 @@ void CChargerGlass::Spawn(void)
 	SET_MODEL(ENT(pev), "models/field.mdl");
 
 	// Properties
-	pev->movetype = MOVETYPE_FLY;
-	pev->classname = MAKE_STRING("item_recharge_glass");
+	pev->movetype = MOVETYPE_NONE;
+	// PS2HLU
+	// Match actual PS2 HL classname
+	// TODO: There's some bizarre code present in the charger. Investigate that
+	pev->classname = MAKE_STRING("item_rechargefield");
 	pev->solid = SOLID_NOT;
 
 	// BBox
@@ -90,7 +93,15 @@ void CItemRecharge::Spawn(void)
 	
 	// Set up BBox and origin
 	pev->solid = SOLID_BBOX;//SOLID_TRIGGER;
-	SetSequenceBox();
+	
+	if (pev->angles.y < 0.0f)
+		pev->angles.y += 360.0f;
+
+	if (pev->angles.y == 0.0f || pev->angles.y == 180.0f)
+		UTIL_SetSize(pev, Vector(-16, -18, 0), Vector(16, 18, 32));
+	else
+		UTIL_SetSize(pev, Vector(-18, -16, 0), Vector(18, 16, 32));
+
 	UTIL_SetOrigin(pev, pev->origin);
 
 	// Reset bone controllers

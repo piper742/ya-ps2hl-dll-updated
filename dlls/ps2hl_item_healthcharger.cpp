@@ -1,5 +1,6 @@
 // Includes
 #include "ps2hl_item_healthcharger.h"
+#include <util.h>
 
 //================================
 // Bottle for charger
@@ -24,7 +25,7 @@ void CHealthBottle::Spawn(void)
 	SET_MODEL(ENT(pev), "models/health_charger_both.mdl");
 
 	// Properties
-	pev->movetype = MOVETYPE_FLY;
+	pev->movetype = MOVETYPE_NONE;
 	pev->classname = MAKE_STRING("item_healthcharger_bottle");
 	pev->solid = SOLID_NOT;
 	
@@ -38,8 +39,7 @@ void CHealthBottle::Spawn(void)
 	pev->renderamt = HCHG_GLASS_TRANSPARENCY;	// Transparency amount
 
 	// Initial animation
-	pev->sequence = HBOTTLE_SEQ_IDLE;
-	pev->frame = 0;
+	ChangeSequence(HBOTTLE_SEQ_IDLE);
 
 	// Set think delay
 	pev->nextthink = gpGlobals->time + HCHG_DELAY_THINK;
@@ -51,6 +51,7 @@ void CHealthBottle::Think(void)
 	pev->nextthink = gpGlobals->time + HCHG_DELAY_THINK;
 
 	// Call animation handler
+	DispatchAnimEvents();
 	StudioFrameAdvance(0);
 
 	// State handler
@@ -147,8 +148,16 @@ void CItemHealthCharger::Spawn(void)
 
 	// Set up BBox and origin
 	pev->solid = SOLID_BBOX;//SOLID_TRIGGER;
-	SetSequenceBox();
 	UTIL_SetOrigin(pev, pev->origin);
+
+	// PS2HLU
+	if (pev->angles.y < 0.0f)
+		pev->angles.y += 360.0f;
+	
+	if (pev->angles.y == 0.0f || pev->angles.y == 180.0f)
+		UTIL_SetSize(pev, Vector(-16, -18, 0), Vector(16, 18, 32));
+	else
+		UTIL_SetSize(pev, Vector(-18, -16, 0), Vector(18, 16, 32));
 
 	// Reset bone controllers
 	InitBoneControllers();
