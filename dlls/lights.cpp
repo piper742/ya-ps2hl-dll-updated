@@ -223,9 +223,9 @@ bool CEnvLight::KeyValue(KeyValueData* pkvd)
 
 		// PS2HLU: subtle change here, can't be seen ingame in PS2 HL
 		// simulate qrad direct, ambient,and gamma adjustments, as well as engine scaling
-		r = pow(r / 114.0f, 0.5f) * 264.0d;
-		g = pow(g / 114.0f, 0.5f) * 264.0d;
-		b = pow(b / 114.0f, 0.5f) * 264.0d;
+		r = pow(r / 114.0f, 0.5f) * 264.0f;
+		g = pow(g / 114.0f, 0.5f) * 264.0f;
+		b = pow(b / 114.0f, 0.5f) * 264.0f;
 
 		// PS2HLU
 		// This code is present in PS2 HL, but it's
