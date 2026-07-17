@@ -957,8 +957,6 @@ void CBasePlayer::SetAnimation(PLAYER_ANIM playerAnim)
 		break;
 
 	case PLAYER_SUPERJUMP:
-		// PS2HL - player super jump sound
-		EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/pl_long_jump.wav", 1, ATTN_NORM);
 		m_IdealActivity = ACT_LEAP;
 		break;
 
@@ -1648,6 +1646,14 @@ void CBasePlayer::Jump()
 
 	if ((pev->flags & FL_ONGROUND) == 0 || !pev->groundentity)
 	{
+		// PS2HLU
+		// This seems to only be able to play once, and even if that isn't the
+		// case then the length of the animation should obscure false positives.
+		// Using crouch to activate long jumps seems to be causing way more false
+		// positives though
+		if (m_fLongJump && pev->velocity.Length2D() > 50)
+			SetAnimation(PLAYER_SUPERJUMP);
+
 		return;
 	}
 

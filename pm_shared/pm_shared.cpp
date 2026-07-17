@@ -51,7 +51,14 @@ static bool pm_shared_initialized = false;
 // have resorted to this solution that's also present in Quake
 
 struct PlayerHackData {
-	bool force_crouch = false;
+	// Do we stick by a solution like this?
+	// Hope these bitfields won't cause any problems
+	// TODO: Consider utilizing the physinfo "dictionary"
+	// for this to obtain cleaner code
+	unsigned int force_crouch:1 = 0;
+	unsigned int used_longjump:1 = 0;
+	unsigned int :0; // Padding
+
 	double dLastJumpTime = DBL_MAX;
 } PlayerHackData_s;
 
@@ -63,8 +70,8 @@ struct PlayerHackData extrahackdata[32] = {};
 
 inline void resetCrouchHack(int index)
 {
-	extrahackdata[index].force_crouch = false;
-	extrahackdata[index].dLastJumpTime = DBL_MAX;
+	extrahackdata[index].force_crouch = 0;
+	//extrahackdata[index].dLastJumpTime = DBL_MAX;
 }
 
 #pragma warning(disable : 4305)
@@ -2672,6 +2679,11 @@ void PM_Jump()
 		return;
 	}
 
+	// PS2HLU
+	// Reset counter to prevent issues & match PS2 HL retail behaviour
+	const double curTime = pmove->Sys_FloatTime();
+	if ((curTime - extrahackdata[pmove->player_index].dLastJumpTime) > 0.5f)
+		extrahackdata[pmove->player_index].dLastJumpTime = DBL_MAX;
 
 	// PS2HLU
 	// Crouch jump
@@ -2680,15 +2692,75 @@ void PM_Jump()
 	if (pmove->iuser4 & 2)
 	{
 		//pmove->Con_DPrintf("Forcing duck! bInDuck: %s\n", pmove->bInDuck ? "true" : "false");
-		if (pmove->Sys_FloatTime() - extrahackdata[pmove->player_index].dLastJumpTime > 0.2f)
+		if ((curTime - extrahackdata[pmove->player_index].dLastJumpTime) > 0.2f)
 		{
 			//pmove->Con_Printf("Now ducking!\n");
 			//pmove->Con_Printf("DuckTime: %f\n", (pmove->Sys_FloatTime() - dLastJumpTime));
 
 			// HORRIBLE HACK
-			extrahackdata[pmove->player_index].force_crouch = true;
+			extrahackdata[pmove->player_index].force_crouch = 1;
+			//extrahackdata[pmove->player_index].dLastJumpTime = DBL_MAX;
 		}
 	}
+
+	// PS2HLU
+	// Moved here to allow in-air jump registration
+	if ((pmove->oldbuttons & IN_JUMP) != 0)
+		return; // don't pogo stick
+
+	// See if user can super long jump?
+	// XOR with used_longjump
+	const bool cansuperjump = (atoi(pmove->PM_Info_ValueForKey(pmove->physinfo, "slj")) == 1) ^ extrahackdata[pmove->player_index].used_longjump;
+	bool canreallysuperjump = false;
+
+	// Check if we're moving fast enough for a longjump
+	// PS2 HL uses Length2D here to disallow long jumping from a standing position
+	// since a regular Length call would return the velocity of our current jump
+	// and it peaks just above 50
+	if (pmove->velocity.Length2D() > 50 && cansuperjump)
+	{
+		// Don't even bother testing unless we're standing on ground
+		if (pmove->onground != -1)
+		{
+			// Moved that monstrosity of an if statement here
+			if (((0 != pmove->bInDuck) || (pmove->flags & FL_DUCKING) != 0) &&
+					(pmove->cmd.buttons & IN_DUCK) != 0 &&
+					(pmove->flDuckTime > 0))
+				canreallysuperjump = true;
+		}
+		else
+		{
+			// PS2 Style longjump
+			// Check if we're in the air (the ugly way)
+			if (extrahackdata[pmove->player_index].dLastJumpTime < DBL_MAX)
+				canreallysuperjump = true;
+		}
+	}
+
+	// PS2HLU
+	// Moved here due to logic being in the way
+	if (canreallysuperjump)
+	{
+		// PS2HLU
+		// Make sure we're not on ground, otherwise this won't work!
+		pmove->onground = -1;
+		extrahackdata[pmove->player_index].used_longjump = 1; // We did it
+		// Play longjump audio
+		// Use voice channel so walk sounds don't interrupt
+		pmove->PM_PlaySound(CHAN_VOICE, "player/pl_long_jump.wav", 1.0, ATTN_NORM, 0, PITCH_NORM);
+
+		// Adjust for super long jump module
+		// UNDONE -- note this should be based on forward angles, not current velocity.
+			pmove->punchangle[0] = -5;
+
+			for (i = 0; i < 2; i++)
+			{
+				pmove->velocity[i] = pmove->forward[i] * PLAYER_LONGJUMP_SPEED * 1.6;
+			}
+
+			pmove->velocity[2] = sqrt(2 * 800 * 56.0);
+	}
+
 
 	// No more effect
 	if (pmove->onground == -1)
@@ -2700,19 +2772,22 @@ void PM_Jump()
 		return;						  // in air, so no effect
 	}
 
-	if ((pmove->oldbuttons & IN_JUMP) != 0)
-		return; // don't pogo stick
-
-	// In the air now.
-	pmove->onground = -1;
-
 	// PS2HLU
 	// Use in engine timer instead of host's timer
 	// Original code uses gpGlobals's time
 	// For now only use this if we've got crouch jumping enabled
 	// TODO: Can we reuse this for airborne longjump activation?
-	if (pmove->iuser4 & 2)
-		extrahackdata[pmove->player_index].dLastJumpTime = pmove->Sys_FloatTime();
+	//
+	// PS2 HL sadly does it like this, meaning it only gets updated while not on ground,
+	// meaning spamming +jump for bunnyhopping might result in crouching, but this is sadly
+	// Thankfully the cvar exists so it shouldn't really be TOO problematic
+	// Also I'm really sorry to all the bunnyhopping people for messing up all
+	// your jumps when having a long jump module
+	extrahackdata[pmove->player_index].dLastJumpTime = curTime;
+	extrahackdata[pmove->player_index].used_longjump = 0;
+
+	// In the air now.
+	pmove->onground = -1;
 
 	PM_PreventMegaBunnyJumping();
 
@@ -2729,38 +2804,9 @@ void PM_Jump()
 		}
 	}
 
-	// See if user can super long jump?
-	const bool cansuperjump = atoi(pmove->PM_Info_ValueForKey(pmove->physinfo, "slj")) == 1;
-
-	// Acclerate upward
-	// If we are ducking...
-	if ((0 != pmove->bInDuck) || (pmove->flags & FL_DUCKING) != 0)
-	{
-		// Adjust for super long jump module
-		// UNDONE -- note this should be based on forward angles, not current velocity.
-		if (cansuperjump &&
-			(pmove->cmd.buttons & IN_DUCK) != 0 &&
-			(pmove->flDuckTime > 0) &&
-			Length(pmove->velocity) > 50)
-		{
-			pmove->punchangle[0] = -5;
-
-			for (i = 0; i < 2; i++)
-			{
-				pmove->velocity[i] = pmove->forward[i] * PLAYER_LONGJUMP_SPEED * 1.6;
-			}
-
-			pmove->velocity[2] = sqrt(2 * 800 * 56.0);
-		}
-		else
-		{
-			pmove->velocity[2] = sqrt(2 * 800 * 45.0);
-		}
-	}
-	else
-	{
+	// Acclerate upward if we aren't in a long jump
+	if (canreallysuperjump == false)
 		pmove->velocity[2] = sqrt(2 * 800 * 45.0);
-	}
 
 	// Decay it for simulation
 	PM_FixupGravityVelocity();
