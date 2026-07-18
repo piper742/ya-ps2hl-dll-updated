@@ -938,7 +938,8 @@ void CBasePlayer::SetAnimation(PLAYER_ANIM playerAnim)
 	MESSAGE_BEGIN(MSG_ONE, gmsgHudMode, NULL, pev);
 	if (!FBitSet(pev->flags, FL_DUCKING))
 	{
-		if (speed < 270.0f)
+		// PS2HLU
+		if (speed < 220.0f)
 			WRITE_BYTE(0);	// Idle/walk
 		else
 			WRITE_BYTE(1);	// Running
@@ -977,6 +978,22 @@ void CBasePlayer::SetAnimation(PLAYER_ANIM playerAnim)
 			break;
 		default:
 			m_IdealActivity = ACT_RANGE_ATTACK1;
+			break;
+		}
+		break;
+	// PS2HLU
+	case PLAYER_ATTACK2:
+		switch (m_Activity)
+		{
+		case ACT_HOVER:
+		case ACT_SWIM:
+		case ACT_HOP:
+		case ACT_LEAP:
+		case ACT_DIESIMPLE:
+			m_IdealActivity = m_Activity;
+			break;
+		default:
+			m_IdealActivity = ACT_RANGE_ATTACK2;
 			break;
 		}
 		break;
@@ -1051,8 +1068,37 @@ void CBasePlayer::SetAnimation(PLAYER_ANIM playerAnim)
 		ResetSequenceInfo();
 		break;
 
+	// PS2HLU
+	// MP5 animation, just a duplicate of the preexisting one
+	// Seems like there were plans to add a grenade launching animation
+	case ACT_RANGE_ATTACK2:
+		if (FBitSet(pev->flags, FL_DUCKING)) // crouching
+			strcpy(szAnim, "crouch_shoot_mp5");
+		else
+			strcpy(szAnim, "ref_shoot_mp5");
+
+		animDesired = LookupSequence(szAnim);
+		if (animDesired == -1)
+			animDesired = 0;
+
+		if (pev->sequence != animDesired || !m_fSequenceLoops)
+		{
+			pev->frame = 0;
+		}
+
+		if (!m_fSequenceLoops)
+		{
+			pev->effects |= EF_NOINTERP;
+		}
+
+		m_Activity = m_IdealActivity;
+
+		pev->sequence = animDesired;
+		ResetSequenceInfo();
+		break;
+
 	case ACT_WALK:
-		if (m_Activity != ACT_RANGE_ATTACK1 || m_fSequenceFinished)
+		if ((m_Activity != ACT_RANGE_ATTACK1 && m_Activity != ACT_RANGE_ATTACK2) || m_fSequenceFinished)
 		{
 			if (FBitSet(pev->flags, FL_DUCKING)) // crouching
 				strcpy(szAnim, "crouch_aim_");

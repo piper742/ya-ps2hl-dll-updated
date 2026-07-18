@@ -188,8 +188,10 @@ void CMP5::SecondaryAttack()
 
 	m_pPlayer->m_rgAmmo[m_iSecondaryAmmoType]--;
 
-	// player "shoot" animation
-	m_pPlayer->SetAnimation(PLAYER_ATTACK1);
+	// PS2HLU
+	// Probably intended as a custom grenade launch animation, but unfinished
+	// player "mp5 shoot" animation
+	m_pPlayer->SetAnimation(PLAYER_ATTACK2);
 
 	UTIL_MakeVectors(m_pPlayer->pev->v_angle + m_pPlayer->pev->punchangle);
 
