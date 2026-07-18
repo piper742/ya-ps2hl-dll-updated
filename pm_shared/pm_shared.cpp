@@ -55,11 +55,12 @@ struct PlayerHackData {
 	// Hope these bitfields won't cause any problems
 	// TODO: Consider utilizing the physinfo "dictionary"
 	// for this to obtain cleaner code
-	unsigned int force_crouch:1 = 0;
-	unsigned int used_longjump:1 = 0;
-	unsigned int :0; // Padding
+	unsigned char force_crouch:1;
+	unsigned char used_longjump:1;
+	unsigned char :0; // Padding
 
 	double dLastJumpTime = DBL_MAX;
+	PlayerHackData() : force_crouch(0), used_longjump(0), dLastJumpTime(DBL_MAX) {};
 } PlayerHackData_s;
 
 // Have extra hacked-in data available for all potential clients (32)
