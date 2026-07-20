@@ -210,7 +210,10 @@ void CMiniMem::Reset()
 {
 	_visibleParticles = 0;
 
-	for (auto particle : _particles)
+	// Thanks FreeSlave!
+	auto particles = _particles;
+
+	for (auto particle : particles)
 	{
 		particle->Die();
 		delete particle;
