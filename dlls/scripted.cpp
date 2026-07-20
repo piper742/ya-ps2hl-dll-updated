@@ -32,6 +32,9 @@
 // PS2HL - debug
 #include "ps2hl_dbg.h"
 
+// PS2HLU
+#define MYSTERY_MASK 0x300U
+
 /*
 classname "scripted_sequence"
 targetname "me" - there can be more than one with the same name, and they act in concert
@@ -116,6 +119,10 @@ LINK_ENTITY_TO_CLASS(scripted_sequence, CCineMonster);
 #define CLASSNAME "scripted_sequence"
 
 LINK_ENTITY_TO_CLASS(aiscripted_sequence, CCineAI);
+
+// PS2HLU
+// This spawn function might be absent on PS2
+// From the behaviour I'm seeing, I assume m_startTime isn't getting set
 
 #include "studio.h"
 void CCineMonster::Spawn()
@@ -425,7 +432,9 @@ void CCineMonster::PossessEntity()
 
 		m_saved_movetype = pTarget->pev->movetype;
 		m_saved_solid = pTarget->pev->solid;
-		m_saved_effects = pTarget->pev->effects;
+		// PS2HLU
+		// What are these bits used for?
+		m_saved_effects = pTarget->pev->effects & ~MYSTERY_MASK;
 		pTarget->pev->effects |= pev->effects;
 
 		switch (m_fMoveTo)
@@ -441,7 +450,8 @@ void CCineMonster::PossessEntity()
 
 		case 2:
 			pTarget->m_scriptState = SCRIPT_RUN_TO_MARK;
-			DelayStart(true);
+			// PS2HLU
+			//DelayStart(true);
 			break;
 
 		case 4:
@@ -496,7 +506,7 @@ void CCineAI::PossessEntity()
 
 		m_saved_movetype = pTarget->pev->movetype;
 		m_saved_solid = pTarget->pev->solid;
-		m_saved_effects = pTarget->pev->effects;
+		m_saved_effects = pTarget->pev->effects & ~MYSTERY_MASK;
 		pTarget->pev->effects |= pev->effects;
 
 		switch (m_fMoveTo)
@@ -967,7 +977,7 @@ bool CBaseMonster::CineCleanup()
 		m_pCine->m_hTargetEnt = NULL;
 		pev->movetype = m_pCine->m_saved_movetype;
 		pev->solid = m_pCine->m_saved_solid;
-		pev->effects = m_pCine->m_saved_effects;
+		pev->effects = m_pCine->m_saved_effects | pev->effects & MYSTERY_MASK;
 	}
 	else
 	{
