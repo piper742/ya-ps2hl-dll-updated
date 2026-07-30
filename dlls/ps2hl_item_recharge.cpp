@@ -27,12 +27,21 @@ void CChargerGlass::Spawn(void)
 	// Match actual PS2 HL classname
 	// TODO: There's some bizarre code present in the charger. Investigate that
 	pev->classname = MAKE_STRING("item_rechargefield");
-	pev->solid = SOLID_NOT;
+	pev->solid = SOLID_BBOX;
+
+	// PS2HLU
+	// HACK HACK HACK
+	// Actual bounding box for charger since MOVETYPE PUSH and FLY breaks
+	// controller interpolation in modern Goldsrc, and otherwise the
+	// entity becomes blocking for doors
 
 	// BBox
-	Vector Zero;
-	Zero.x = Zero.y = Zero.z = 0;
-	UTIL_SetSize(pev, Zero, Zero);
+	if (pev->angles.y < 0.0f)
+		pev->angles.y += 360.0f;
+	if (pev->angles.y == 0.0f || pev->angles.y == 180.0f)
+		UTIL_SetSize(pev, Vector(-16, -18, 0), Vector(16, 18, 32));
+	else
+		UTIL_SetSize(pev, Vector(-18, -16, 0), Vector(18, 16, 32));
 
 	// Visuals
 	pev->rendermode = kRenderTransTexture;		// Mode with transparency
@@ -92,15 +101,13 @@ void CItemRecharge::Spawn(void)
 	SET_MODEL(ENT(pev), "models/hev.mdl");
 	
 	// Set up BBox and origin
-	pev->solid = SOLID_BBOX;//SOLID_TRIGGER;
-	
-	if (pev->angles.y < 0.0f)
-		pev->angles.y += 360.0f;
+	pev->solid = SOLID_NOT; // PS2HLU
 
-	if (pev->angles.y == 0.0f || pev->angles.y == 180.0f)
-		UTIL_SetSize(pev, Vector(-16, -18, 0), Vector(16, 18, 32));
-	else
-		UTIL_SetSize(pev, Vector(-18, -16, 0), Vector(18, 16, 32));
+	// PS2HLU
+	// HACK HACK HACK
+	// The collision for this is handled by the rechargefield
+	// due to how the engine handles the PUSH movetype
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
 
 	UTIL_SetOrigin(pev, pev->origin);
 

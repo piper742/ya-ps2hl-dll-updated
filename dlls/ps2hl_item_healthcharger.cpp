@@ -27,12 +27,19 @@ void CHealthBottle::Spawn(void)
 	// Properties
 	pev->movetype = MOVETYPE_NONE;
 	pev->classname = MAKE_STRING("item_healthcharger_bottle");
-	pev->solid = SOLID_NOT;
-	
+	pev->solid = SOLID_BBOX; // PS2HLU
+
+	// PS2HLU
+	// Moved collision of charger here, due to how modern goldsrc handles movetype
+	// PUSH and FLY to avoid issues with doors
 	// BBox
-	Vector Zero;
-	Zero.x = Zero.y = Zero.z = 0;
-	UTIL_SetSize(pev, Zero, Zero);
+	if (pev->angles.y < 0.0f)
+		pev->angles.y += 360.0f;
+
+	if (pev->angles.y == 0.0f || pev->angles.y == 180.0f)
+		UTIL_SetSize(pev, Vector(-16, -18, 0), Vector(16, 18, 32));
+	else
+		UTIL_SetSize(pev, Vector(-18, -16, 0), Vector(18, 16, 32));
 
 	// Visuals
 	pev->rendermode = kRenderTransTexture;		// Mode with transparency
@@ -147,17 +154,11 @@ void CItemHealthCharger::Spawn(void)
 	SET_MODEL(ENT(pev), "models/health_charger_body.mdl");
 
 	// Set up BBox and origin
-	pev->solid = SOLID_BBOX;//SOLID_TRIGGER;
+	pev->solid = SOLID_NOT; // PS2HLU
 	UTIL_SetOrigin(pev, pev->origin);
 
 	// PS2HLU
-	if (pev->angles.y < 0.0f)
-		pev->angles.y += 360.0f;
-	
-	if (pev->angles.y == 0.0f || pev->angles.y == 180.0f)
-		UTIL_SetSize(pev, Vector(-16, -18, 0), Vector(16, 18, 32));
-	else
-		UTIL_SetSize(pev, Vector(-18, -16, 0), Vector(18, 16, 32));
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
 
 	// Reset bone controllers
 	InitBoneControllers();
