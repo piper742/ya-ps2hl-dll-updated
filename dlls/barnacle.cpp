@@ -31,6 +31,52 @@
 //=========================================================
 #define BARNACLE_AE_PUKEGIB 2
 
+// PS2HLU
+// Invisible hull to get the engine to do some calculations for us
+class CBarnacleVisHack : public CPointEntity
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	int Classify() override { return CLASS_NONE; /* CLASS_BARNACLE */ }
+};
+
+void CBarnacleVisHack::Spawn()
+{
+	Precache();
+
+	// Based off of how CXenHull does something very similar
+	pev->classname = MAKE_STRING("pc_barnaclevishack");
+
+	SET_MODEL(ENT(pev), "models/barnacle.mdl");
+	// PS2HLU value grabbed from PS2 HL (1024 was subtracted in StudioCheckBBox)
+	UTIL_SetSize(pev, Vector(-16, -16, -1056), Vector(16, 16, 0));
+
+	pev->solid = SOLID_NOT;
+	pev->movetype = MOVETYPE_NONE;
+	pev->takedamage = DAMAGE_NO;
+
+	// Match CXenHull behaviour
+	pev->renderamt = 0;
+	pev->rendermode = kRenderTransTexture;
+
+	// Can't we do this sooner?
+	SetThink( &CBaseEntity::SUB_Remove );
+	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+void CBarnacleVisHack::Precache()
+{
+	// This is probably redundant, but account for
+	// someone creating a save then this entity getting
+	// processed first rather than a barnacle
+	PRECACHE_MODEL("models/barnacle.mdl");
+
+	// Reset effects to prevent fireflies, in case someone
+	// manages to create a save during our lifetime
+	pev->effects = 0;
+}
+
 class CBarnacle : public CBaseMonster
 {
 public:
@@ -46,6 +92,7 @@ public:
 	bool Save(CSave& save) override;
 	bool Restore(CRestore& restore) override;
 	static TYPEDESCRIPTION m_SaveData[];
+	void EXPORT ApplyVisHack();
 
 	float m_flAltitude;
 	float m_flKillVictimTime;
@@ -53,6 +100,9 @@ public:
 	bool m_fTongueExtended;
 	bool m_fLiftingPrey;
 	float m_flTongueAdj;
+
+	// PS2HLU flag so we can reapply the hack after level changes and saveloads
+	bool appliedVisHack = false;
 };
 LINK_ENTITY_TO_CLASS(monster_barnacle, CBarnacle);
 
@@ -149,6 +199,12 @@ void CBarnacle::BarnacleThink()
 	float flLength;
 
 	pev->nextthink = gpGlobals->time + 0.1;
+
+	// PS2HLU
+	// The hack seems to be getting applied in a pretty timely manner,
+	// so just leave here for now
+	if (appliedVisHack == 0)
+		ApplyVisHack();
 
 	if (m_hEnemy != NULL)
 	{
@@ -387,6 +443,11 @@ void CBarnacle::WaitTillDead()
 //=========================================================
 void CBarnacle::Precache()
 {
+	// PS2HLU
+	// Reset hack in precache, is otherwise reset to false
+	// by not being saved in Save/Restore
+	appliedVisHack = false;
+
 	PRECACHE_MODEL("models/barnacle.mdl");
 
 	PRECACHE_SOUND("barnacle/bcl_alert2.wav"); //happy, lifting food up
@@ -438,4 +499,37 @@ CBaseEntity* CBarnacle::TongueTouchEnt(float* pflLength)
 	}
 
 	return NULL;
+}
+
+// PS2HLU
+void CBarnacle::ApplyVisHack()
+{
+	// A fix for barnacles getting prematurely culled was attempted in PS2 HL,
+	// but was done completely in the wrong place (engine's StudioCheckBBox).
+	// The real fix is to ensure it has correct leaf visibility data for it's
+	// expected size + the max potential length of it's tongue.
+	// This data gets recalculated by the engine every time an edict gets relinked
+	// which occurs during movement, size or angle change. The fact that the barnacle
+	// is completely stationary is what allows changing this value without it getting
+	// overwritten by the engine.
+	// Have the engine calculate this for another entity, copy the result, then destroy
+	// the dummy entity.
+	// This is the best cross-engine solution I found for invoking the engine's
+	// SV_FindTouchedLeafs function
+	CBarnacleVisHack* pHack = GetClassPtr((CBarnacleVisHack*)NULL);
+	pHack->Spawn();
+	UTIL_SetOrigin(pHack->pev, pev->origin);
+	pHack->pev->angles = pev->angles;
+
+	edict_t* ownEdict = edict();
+	edict_t* hackEdict = ENT(pHack->pev);
+
+	// Copy everything because we've got no idea of the amount of visleafs
+	ownEdict->headnode = hackEdict->headnode;
+	ownEdict->num_leafs = hackEdict->num_leafs;
+	memcpy(ownEdict->leafnums, hackEdict->leafnums, sizeof(ownEdict->leafnums));
+
+	//ALERT(at_console, "Applied barnacle vis hack!\n");
+
+	appliedVisHack = true;
 }
