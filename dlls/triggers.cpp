@@ -532,43 +532,25 @@ void CRenderFxManager::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TY
 	}
 	
 	// PS2HLU
-	// Searches for a group of other entities that all have the same netname & changes their rendering.
-
-
-	if (!FStringNull(pev->netname))
+	// Searches for a group of other entities (excluding env_render) that all have the same netname & changes their rendering.
+	if (FStringNull(pev->netname) == 0)
 	{
 		CBaseEntity *pentTarget2 = NULL;
 		pentTarget2 = UTIL_FindEntityByString(NULL, "netname", STRING(pev->netname));
 		while (pentTarget2)
 		{
-			if (!FBitSet(pev->spawnflags, SF_RENDER_MASKFX))
-				pentTarget2->pev->renderfx = pev->renderfx;
-			if (!FBitSet(pev->spawnflags, SF_RENDER_MASKAMT))
-				pentTarget2->pev->renderamt = pev->renderamt;
-			if (!FBitSet(pev->spawnflags, SF_RENDER_MASKMODE))
-				pentTarget2->pev->rendermode = pev->rendermode;
-
-			// PS2HLU
-			// Had to use this extremely weird solution
-			// to update laser colors...
-
-			if(!pev->spawnflags & (65536 | 8) || FClassnameIs(pentTarget2->pev, "env_sprite") && !FBitSet(pev->spawnflags, SF_RENDER_MASKCOLOR))
+			if (FClassnameIs(pentTarget2->pev, "env_render") == 0)
 			{
-				// This line somehow locks the laser color ???
-				// so not executing it fixes the bug
-				pentTarget2->pev->rendercolor = pev->rendercolor;
+				if (!FBitSet(pev->spawnflags, SF_RENDER_MASKFX))
+					pentTarget2->pev->renderfx = pev->renderfx;
+				if (!FBitSet(pev->spawnflags, SF_RENDER_MASKAMT))
+					pentTarget2->pev->renderamt = pev->renderamt;
+				if (!FBitSet(pev->spawnflags, SF_RENDER_MASKMODE))
+					pentTarget2->pev->rendermode = pev->rendermode;
+				if (!FBitSet(pev->spawnflags, SF_RENDER_MASKCOLOR))
+					pentTarget2->pev->rendercolor = pev->rendercolor;
 			}
 
-			
-			if (FClassnameIs(pentTarget2->pev, "env_beam") || FClassnameIs(pentTarget2->pev, "env_lightning") || FClassnameIs(pentTarget2->pev, "env_laser") || FClassnameIs(pentTarget2->pev, "beam"))
-			//if(pev->spawnflags & 65536)
-			{
-				// SetColor almost does the exact same thing
-				// but it works somehow
-				pentTarget2->SetColor((int)pev->rendercolor.x, (int)pev->rendercolor.y, (int)pev->rendercolor.z);
-				pentTarget2->pev->nextthink = gpGlobals->time + 0.1;
-			}
-			
 			pentTarget2 = UTIL_FindEntityByString(pentTarget2, "netname", STRING(pev->netname));
 		}
 	}
