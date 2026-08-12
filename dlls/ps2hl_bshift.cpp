@@ -54,6 +54,8 @@ class CItemArmorVest : public CItem
 		if ((pPlayer->pev->armorvalue < MAX_NORMAL_BATTERY) &&
 			(pPlayer->pev->weapons & (1 << WEAPON_SUIT)))
 		{
+			int pct;
+			char szcharge[64];
 			pPlayer->pev->armorvalue += 60;
 			pPlayer->pev->armorvalue = V_min(pPlayer->pev->armorvalue, MAX_NORMAL_BATTERY);
 
@@ -62,6 +64,18 @@ class CItemArmorVest : public CItem
 			MESSAGE_BEGIN(MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev);
 			WRITE_STRING(STRING(pev->classname));
 			MESSAGE_END();
+
+			// PS2HLU
+			// Play updated suit level voiceline
+			// TODO: Is the rounding code broken?
+			pct = (int)((float)(pPlayer->pev->armorvalue) + 0.5) / 5;
+			if (pct > 0)
+				pct--;
+
+			sprintf(szcharge, "!HEV_%1dP", pct);
+
+			pPlayer->SetSuitUpdate(szcharge, false, SUIT_NEXT_IN_30SEC);
+
 			return true;
 		}
 		return false;
@@ -94,6 +108,8 @@ class CItemHelmet : public CItem
 		if ((pPlayer->pev->armorvalue < MAX_NORMAL_BATTERY) &&
 			(pPlayer->pev->weapons & (1 << WEAPON_SUIT)))
 		{
+			int pct;
+			char szcharge[64];
 			pPlayer->pev->armorvalue += 40;
 			pPlayer->pev->armorvalue = V_min(pPlayer->pev->armorvalue, MAX_NORMAL_BATTERY);
 
@@ -102,6 +118,18 @@ class CItemHelmet : public CItem
 			MESSAGE_BEGIN(MSG_ONE, gmsgItemPickup, NULL, pPlayer->pev);
 			WRITE_STRING(STRING(pev->classname));
 			MESSAGE_END();
+
+			// PS2HLU
+			// Play updated suit level voiceline
+			// TODO: Is the rounding code broken?
+			pct = (int)((float)(pPlayer->pev->armorvalue) + 0.5) / 5;
+			if (pct > 0)
+				pct--;
+
+			sprintf(szcharge, "!HEV_%1dP", pct);
+
+			pPlayer->SetSuitUpdate(szcharge, false, SUIT_NEXT_IN_30SEC);
+
 			return true;
 		}
 		return false;
