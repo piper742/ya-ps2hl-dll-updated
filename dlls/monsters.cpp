@@ -2523,7 +2523,7 @@ float CBaseMonster::FlYawDiff()
 //=========================================================
 float CBaseMonster::ChangeYaw(int yawSpeed)
 {
-	float ideal, current, move, speed;
+	float ideal, current, move, move2, speed;
 
 	current = UTIL_AngleMod(pev->angles.y);
 	ideal = pev->ideal_yaw;
@@ -2543,16 +2543,17 @@ float CBaseMonster::ChangeYaw(int yawSpeed)
 
 		speed = (float)yawSpeed * delta * 2;
 		move = ideal - current;
+		move2 = move;
 
 		if (ideal > current)
 		{
-			if (move >= 180)
-				move = move - 360;
+			if (move2 >= 180)
+				move = move2 - 360;
 		}
 		else
 		{
-			if (move <= -180)
-				move = move + 360;
+			if (move2 <= -180)
+				move = move2 + 360;
 		}
 
 		if (move > 0)
@@ -2566,16 +2567,22 @@ float CBaseMonster::ChangeYaw(int yawSpeed)
 				move = -speed;
 		}
 
+		if (yawSpeed == 0 || speed < 1.0f)
+		{
+			ALERT(at_console, "gave %s a change yaw nudge!\n", STRING(pev->classname));
+			move = move2;
+		}
+
 		pev->angles.y = UTIL_AngleMod(current + move);
 
 		// turn head in desired direction only if they have a turnable head
 		if ((m_afCapability & bits_CAP_TURN_HEAD) != 0)
 		{
 			float yaw = pev->ideal_yaw - pev->angles.y;
-			if (yaw > 180)
-				yaw -= 360;
-			if (yaw < -180)
-				yaw += 360;
+			if (yaw > 180.0f)
+				yaw -= 360.0f;
+			if (yaw < -180.0f)
+				yaw += 360.0f;
 			// yaw *= 0.8;
 			SetBoneController(0, yaw);
 		}
