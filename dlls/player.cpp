@@ -363,6 +363,11 @@ bool CBasePlayer::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, fl
 	flBonus = ARMOR_BONUS;
 	flRatio = ARMOR_RATIO;
 
+	// PS2HLU
+	// TODO
+	//if (pev->flags & FL_FAKECLIENT)
+		// Run bot damage here! Includes playing scream sounds
+
 	if ((bitsDamageType & DMG_BLAST) != 0 && g_pGameRules->IsMultiplayer())
 	{
 		// blasts damage armor more.
@@ -374,6 +379,12 @@ bool CBasePlayer::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, fl
 		return false;
 	// go take the damage first
 
+
+	// PS2HLU
+	// Training maps failsafe (t0 prefix)
+	// Player cannot take lethal damage.
+	if (((pev->health >= 10.0f && flDamage < pev->health) || strncmp(STRING(gpGlobals->mapname), "t0", (sizeof("t0") - 1)) ) == 0)
+		return false;
 
 	CBaseEntity* pAttacker = CBaseEntity::Instance(pevAttacker);
 
@@ -3694,6 +3705,13 @@ void CBasePlayer::ImpulseCommands()
 			pCan->Spawn(pev);
 		}
 
+		break;
+
+	// PS2HLU
+	// Sets the current weapon's ammo to zero (only visually)
+	// and forces the ammo counter to display as if reserve ammo
+	// is present (likely used for func_tank "maxammo" keyvalue)
+	case 204:
 		break;
 
 	default:
