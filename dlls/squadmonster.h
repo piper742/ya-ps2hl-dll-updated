@@ -133,4 +133,8 @@ public:
 		}
 		return Center() * 0.75 + EyePosition() * 0.25;
 	}
+
+	// PS2HLU
+	// Alert whole squad if a member is killed
+	bool TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType) override;
 };

@@ -43,6 +43,73 @@ TYPEDESCRIPTION CSquadMonster::m_SaveData[] =
 
 IMPLEMENT_SAVERESTORE(CSquadMonster, CBaseMonster);
 
+// PS2HLU
+// Code is from: https://github.com/twhl-community/halflife-op4-updated/blob/master/dlls/squadmonster.cpp#L622C1-L684C2
+// Seems like gearbox just copied this from Opposing Force wholesale
+bool CSquadMonster::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
+{
+	if (flDamage >= pev->max_health && pevAttacker)
+	{
+		auto squadLeader = MySquadLeader();
+
+		for (int i = 0; i < MAX_SQUAD_MEMBERS - 1; ++i)
+		{
+			//auto squadMember = squadLeader->m_hSquadMember[i].Entity<CSquadMonster>();
+			auto squadMember = (squadLeader->MySquadMember(i));
+
+			if (squadMember)
+			{
+				if (!squadMember->m_hEnemy)
+				{
+					g_vecAttackDir = ((pevAttacker->origin + pevAttacker->view_ofs) - (squadMember->pev->origin + squadMember->pev->view_ofs)).Normalize();
+
+					const Vector vecStart = squadMember->pev->origin + squadMember->pev->view_ofs;
+					const Vector vecEnd = pevAttacker->origin + pevAttacker->view_ofs + (g_vecAttackDir * m_flDistLook);
+
+					TraceResult tr;
+
+					UTIL_TraceLine(vecStart, vecEnd, dont_ignore_monsters, squadMember->edict(), &tr);
+
+					if (tr.flFraction == 1.0)
+					{
+						m_IdealMonsterState = MONSTERSTATE_HUNT;
+					}
+					else
+					{
+						squadMember->m_hEnemy = CBaseEntity::Instance(tr.pHit);
+						squadMember->m_vecEnemyLKP = pevAttacker->origin;
+						squadMember->SetConditions(bits_COND_NEW_ENEMY);
+					}
+				}
+			}
+		}
+
+		if (!squadLeader->m_hEnemy)
+		{
+			g_vecAttackDir = ((pevAttacker->origin + pevAttacker->view_ofs) - (squadLeader->pev->origin + squadLeader->pev->view_ofs)).Normalize();
+
+			const Vector vecStart = squadLeader->pev->origin + squadLeader->pev->view_ofs;
+			const Vector vecEnd = pevAttacker->origin + pevAttacker->view_ofs + (g_vecAttackDir * m_flDistLook);
+
+			TraceResult tr;
+
+			UTIL_TraceLine(vecStart, vecEnd, dont_ignore_monsters, squadLeader->edict(), &tr);
+
+			if (tr.flFraction == 1.0)
+			{
+				m_IdealMonsterState = MONSTERSTATE_HUNT;
+			}
+			else
+			{
+				squadLeader->m_hEnemy = CBaseEntity::Instance(tr.pHit);
+				squadLeader->m_vecEnemyLKP = pevAttacker->origin;
+				squadLeader->SetConditions(bits_COND_NEW_ENEMY);
+			}
+		}
+	}
+
+	return CBaseMonster::TakeDamage(pevInflictor, pevAttacker, flDamage, bitsDamageType);
+}
 
 //=========================================================
 // OccupySlot - if any slots of the passed slots are
