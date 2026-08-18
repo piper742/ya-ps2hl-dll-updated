@@ -41,6 +41,7 @@ class CTripmineGrenade : public CGrenade
 	void EXPORT PowerupThink();
 	void EXPORT BeamBreakThink();
 	void EXPORT DelayDeathThink();
+	void EXPORT TripmineTouch(CBaseEntity* pOther); // PS2HLU
 	void Killed(entvars_t* pevAttacker, int iGib) override;
 
 	void MakeBeam();
@@ -236,6 +237,7 @@ void CTripmineGrenade::MakeBeam()
 
 	// set to follow laser spot
 	SetThink(&CTripmineGrenade::BeamBreakThink);
+	SetTouch(&CTripmineGrenade::TripmineTouch); // PS2HLU
 	pev->nextthink = gpGlobals->time + 0.1;
 
 	Vector vecTmpEnd = pev->origin + m_vecDir * 2048 * m_flBeamLength;
@@ -308,6 +310,24 @@ void CTripmineGrenade::BeamBreakThink()
 	}
 
 	pev->nextthink = gpGlobals->time + 0.1;
+}
+
+// PS2HLU
+// Blow up when a player tries standing on the tripmine
+// Maybe meant to prevent skips?
+// Likely the final iteration of Gearbox's tripmine changes
+// since Opposing Force
+void CTripmineGrenade::TripmineTouch(CBaseEntity* pOther)
+{
+	if (pOther && pOther->IsPlayer())
+	{
+		if (pev->origin.z < (pOther->pev->origin.z + pOther->pev->mins.z))
+		{
+			pev->owner = m_pRealOwner;
+			pev->health = 0;
+			Killed(VARS(pev->owner), GIB_NORMAL);
+		}
+	}
 }
 
 bool CTripmineGrenade::TakeDamage(entvars_t* pevInflictor, entvars_t* pevAttacker, float flDamage, int bitsDamageType)
