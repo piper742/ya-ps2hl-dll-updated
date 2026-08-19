@@ -53,9 +53,7 @@ static bool pm_shared_initialized = false;
 struct PlayerHackData {
 	// Do we stick by a solution like this?
 	// Hope these bitfields won't cause any problems
-	// TODO: Consider utilizing the physinfo "dictionary"
-	// for this to obtain cleaner code
-	unsigned char force_crouch:1;
+	unsigned char force_crouch:1; // TODO: Expand to 2 bits for crouch toggle!
 	unsigned char used_longjump:1;
 	unsigned char :0; // Padding
 
@@ -2687,10 +2685,8 @@ void PM_Jump()
 		extrahackdata[pmove->player_index].dLastJumpTime = DBL_MAX;
 
 	// PS2HLU
-	// Crouch jump
-	// The second bit of iuser4 must be checked
-	// This is kinda hacky, but this might be the best possible method to actually handle this
-	if (pmove->iuser4 & 2)
+	// Bit 2 means crouch jump
+	if (atoi(pmove->PM_Info_ValueForKey(pmove->physinfo, "gpm")) & 2)
 	{
 		//pmove->Con_DPrintf("Forcing duck! bInDuck: %s\n", pmove->bInDuck ? "true" : "false");
 		if ((curTime - extrahackdata[pmove->player_index].dLastJumpTime) > 0.2f)
@@ -2712,7 +2708,7 @@ void PM_Jump()
 	// See if user can super long jump?
 	// XOR with used_longjump
 	const bool cansuperjump = (atoi(pmove->PM_Info_ValueForKey(pmove->physinfo, "slj")) == 1) ^ extrahackdata[pmove->player_index].used_longjump;
-	bool canreallysuperjump = false;
+	bool dosuperjump = false;
 
 	// Check if we're moving fast enough for a longjump
 	// PS2 HL uses Length2D here to disallow long jumping from a standing position
@@ -2727,20 +2723,20 @@ void PM_Jump()
 			if (((0 != pmove->bInDuck) || (pmove->flags & FL_DUCKING) != 0) &&
 					(pmove->cmd.buttons & IN_DUCK) != 0 &&
 					(pmove->flDuckTime > 0))
-				canreallysuperjump = true;
+				dosuperjump = true;
 		}
 		else
 		{
 			// PS2 Style longjump
 			// Check if we're in the air (the ugly way)
 			if (extrahackdata[pmove->player_index].dLastJumpTime < DBL_MAX)
-				canreallysuperjump = true;
+				dosuperjump = true;
 		}
 	}
 
 	// PS2HLU
 	// Moved here due to logic being in the way
-	if (canreallysuperjump)
+	if (dosuperjump)
 	{
 		// PS2HLU
 		// Make sure we're not on ground, otherwise this won't work!
@@ -2806,7 +2802,7 @@ void PM_Jump()
 	}
 
 	// Acclerate upward if we aren't in a long jump
-	if (canreallysuperjump == false)
+	if (dosuperjump == false)
 		pmove->velocity[2] = sqrt(2 * 800 * 45.0);
 
 	// Decay it for simulation

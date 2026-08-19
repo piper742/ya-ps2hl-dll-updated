@@ -5092,21 +5092,27 @@ void CBasePlayer::SetPrefsFromUserinfo(char* infobuffer)
 	}
 
 	// PS2HLU
+	// Stored in a physinfo value called gamepad physics mode abbreviated "gpm"
+	// Handles changes to movement/physics to accomedate playing with a gamepad.
+	// Currently includes crouch jumping, but will also handle crouch toggle.
 	const char* value2 = g_engfuncs.pfnInfoKeyValue(infobuffer, "cl_cjump_style");
 	bool iscjumpon = false;
+	unsigned char gamepadPhysicsMode = 0;
 	
 	if ('\0' != *value2)
 		iscjumpon = static_cast<bool>(atoi(value2));
 
 	if (iscjumpon)
-	{
-		pev->iuser4 |= 2;
-	}
+		gamepadPhysicsMode |= BIT_GPM_CROUCH_JUMP;
 	else
-	{
-		pev->iuser4 &= ~2;
-	}
+		gamepadPhysicsMode &= ~BIT_GPM_CROUCH_JUMP;
+
 	// TODO: Crouch toggle
+
+	char finalFlag[2] = {0};
+	snprintf(finalFlag, sizeof(finalFlag), "%u", gamepadPhysicsMode);
+	//ALERT(at_console, "gpm flag: %s\n", finalFlag);
+	g_engfuncs.pfnSetPhysicsKeyValue(edict(), "gpm", finalFlag);
 }
 
 //=========================================================
