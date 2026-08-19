@@ -10,6 +10,7 @@ TYPEDESCRIPTION CTriggerRandom::m_SaveData[] =
 	DEFINE_FIELD(CTriggerRandom, Range, FIELD_INTEGER),
 	DEFINE_FIELD(CTriggerRandom, FiredFlags, FIELD_INTEGER),
 	DEFINE_FIELD(CTriggerRandom, FiredCount, FIELD_INTEGER),
+	DEFINE_FIELD(CTriggerRandom, triggerType, FIELD_INTEGER),
 };
 IMPLEMENT_SAVERESTORE(CTriggerRandom, CBaseDelay);
 
@@ -18,8 +19,25 @@ IMPLEMENT_SAVERESTORE(CTriggerRandom, CBaseDelay);
 
 // Parse keys
 bool CTriggerRandom::KeyValue(KeyValueData *pkvd)
-{
-	if (FStrEq(pkvd->szKeyName, "randomrange"))
+{	
+	if (FStrEq(pkvd->szKeyName, "triggerstate"))
+	{
+		int type = atoi(pkvd->szValue);
+		switch (type)
+		{
+		case 0:
+			triggerType = USE_OFF;
+			break;
+		case 2:
+			triggerType = USE_TOGGLE;
+			break;
+		default:
+			triggerType = USE_ON;
+			break;
+		}
+		return true;
+	}
+	else if (FStrEq(pkvd->szKeyName, "randomrange"))
 	{
 		// Get range
 		Range = atoi(pkvd->szValue);
@@ -34,9 +52,13 @@ bool CTriggerRandom::KeyValue(KeyValueData *pkvd)
 // Spawn handler
 void CTriggerRandom::Spawn(void)
 {
+	// PS2HLU
+	// This flag doesn't seem to have been used in any of the maps
+	// TODO: Investigate & implement
+	//
 	// Get flags
 	if (FBitSet(pev->spawnflags, TRR_UNKNOWN))
-		ALERT(at_console, "\ntrigger_random: unknown flag (1)\n\n");
+		ALERT(at_console, "\ntrigger_random: unknown flag (4)\n\n");
 
 	if (FBitSet(pev->spawnflags, TRR_NOREPEAT))
 	{
@@ -106,6 +128,10 @@ void CTriggerRandom::Use(CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	snprintf(szTargetName, sizeof(szTargetName), "%s%d", STRING(pev->target), RandomVal);
 
 	// Fire target
-	FireTargets(szTargetName, this, this, USE_ON, 1);
+	FireTargets(szTargetName, this, this, triggerType, 1);
 	PS2HL_DEBUG(ALERT(at_console, "\ntrigger_random: fired target #%d out of 0-%d\nname: %s\n\n", RandomVal, Range == 0? 0 : Range - 1, szTargetName));
+
+	// PS2HLU
+	if (pev->spawnflags & TRR_FIREONCE)
+		UTIL_Remove(this);
 }

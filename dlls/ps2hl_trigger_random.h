@@ -26,8 +26,9 @@ Created by supadupaplex
 #include "ps2hl_dbg.h"	// Debug
 
 // Spawnflags
-#define	TRR_UNKNOWN 1
+#define	TRR_FIREONCE 1
 #define	TRR_NOREPEAT 2
+#define	TRR_UNKNOWN 4
 
 // Defines
 #define TRR_TRGT_CAP 10	// Target count cap, don't make it bigger than 32
@@ -40,6 +41,8 @@ public:
 private:
 	int FiredFlags;		// Flags to remember what targets were fired
 	int FiredCount;		// Remember how many times targets were fired
+	// PS2HLU
+	USE_TYPE triggerType;
 
 	// Methods
 	bool KeyValue(KeyValueData *pkvd);	// Parse keys
