@@ -4729,11 +4729,12 @@ Vector CBasePlayer::GetAutoaimVector(float flDelta)
 	// ALERT( at_console, "%f %f\n", angles.x, angles.y );
 
 	// PS2HLU
-	// Weapons dont change their firing angle, this functionality was replaced
-	// in favor of the lock-on mechanic
+	// Allow bots to still utilize autoaim
+	if ((pev->flags & FL_FAKECLIENT) == 0)
+		UTIL_MakeVectors(pev->v_angle + pev->punchangle);
+	else
+		UTIL_MakeVectors(pev->v_angle + pev->punchangle + m_vecAutoAim);
 
-	//UTIL_MakeVectors(pev->v_angle + pev->punchangle + m_vecAutoAim);
-	UTIL_MakeVectors(pev->v_angle + pev->punchangle);
 	return gpGlobals->v_forward;
 }
 
