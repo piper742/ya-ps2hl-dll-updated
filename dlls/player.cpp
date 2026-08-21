@@ -22,7 +22,6 @@
 
 #include <limits>
 #include <algorithm>
-#include <ps2hlu_targeting_spot.h>
 
 #include "extdll.h"
 #include "util.h"
@@ -42,6 +41,7 @@
 #include "hltv.h"
 #include "UserMessages.h"
 #include "client.h"
+#include "ps2hlu_targeting_spot.h"
 
 // #define DUCKFIX
 
