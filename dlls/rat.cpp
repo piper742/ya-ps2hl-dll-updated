@@ -83,6 +83,11 @@ void CRat::Spawn()
 	m_MonsterState = MONSTERSTATE_NONE;
 
 	MonsterInit();
+
+	// PS2HLU
+	// Prevent autoaim from snapping to rats
+	// Rats are present on t0a0b2 in the shooting gallery
+	pev->takedamage = DAMAGE_YES;
 }
 
 //=========================================================
