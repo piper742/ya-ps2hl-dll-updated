@@ -105,6 +105,7 @@ HLDLL_OBJS = \
 	$(HLDLL_OBJ_DIR)/ps2hlu_monster_alienflyer.o \
 	$(HLDLL_OBJ_DIR)/ps2hlu_monster_modeltrain.o \
 	$(HLDLL_OBJ_DIR)/ps2hlu_env_extremefunnel.o \
+	$(HLDLL_OBJ_DIR)/ps2hlu_targeting_spot.o \
 	$(HLDLL_OBJ_DIR)/python.o \
 	$(HLDLL_OBJ_DIR)/rat.o \
 	$(HLDLL_OBJ_DIR)/roach.o \

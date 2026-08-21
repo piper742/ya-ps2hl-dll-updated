@@ -357,6 +357,8 @@ void W_Precache()
 	PRECACHE_SOUND("weapons/bullet_hit2.wav"); // hit by bullet
 
 	PRECACHE_SOUND("items/weapondrop1.wav"); // weapon falls to the ground
+	
+	UTIL_PrecacheOther("targeting_spot");
 }
 
 
@@ -684,11 +686,8 @@ bool CBasePlayerWeapon::UpdateClientData(CBasePlayer* pPlayer)
 	int state = 0;
 	if (pPlayer->m_pActiveItem == this)
 	{
-		if (pPlayer->m_fOnTarget)
-			if (pPlayer->m_bIsTargetFriendly)
-				state = 0x41;
-			else
-				state = WEAPON_IS_ONTARGET;
+		if (pPlayer->m_iOnTarget)
+			state = (WEAPON_IS_ONTARGET - 1) + pPlayer->m_iOnTarget;
 		else
 			state = 1;
 	}

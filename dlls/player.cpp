@@ -22,6 +22,7 @@
 
 #include <limits>
 #include <algorithm>
+#include <ps2hlu_targeting_spot.h>
 
 #include "extdll.h"
 #include "util.h"
@@ -120,6 +121,10 @@ TYPEDESCRIPTION CBasePlayer::m_playerSaveData[] =
 
 		DEFINE_FIELD(CBasePlayer, m_flStartCharge, FIELD_TIME),
 
+		// PS2HLU
+		DEFINE_FIELD(CBasePlayer, m_hAutoAimTarget, FIELD_EHANDLE),
+		DEFINE_FIELD(CBasePlayer, m_hTargetedEnemy, FIELD_EHANDLE),
+
 		//DEFINE_FIELD( CBasePlayer, m_fDeadTime, FIELD_FLOAT ), // only used in multiplayer games
 		//DEFINE_FIELD( CBasePlayer, m_fGameHUDInitialized, FIELD_INTEGER ), // only used in multiplayer games
 		//DEFINE_FIELD( CBasePlayer, m_flStopExtraSoundTime, FIELD_TIME ),
@@ -141,7 +146,7 @@ TYPEDESCRIPTION CBasePlayer::m_playerSaveData[] =
 		//DEFINE_FIELD( CBasePlayer, m_nCustomSprayFrames, FIELD_INTEGER ), // Don't restore, depends on server message after spawning and only matters in multiplayer
 		//DEFINE_FIELD( CBasePlayer, m_vecAutoAim, FIELD_VECTOR ), // Don't save/restore - this is recomputed
 		//DEFINE_ARRAY( CBasePlayer, m_rgAmmoLast, FIELD_INTEGER, MAX_AMMO_SLOTS ), // Don't need to restore
-		//DEFINE_FIELD( CBasePlayer, m_fOnTarget, FIELD_BOOLEAN ), // Don't need to restore
+		//DEFINE_FIELD( CBasePlayer, m_iOnTarget, FIELD_BOOLEAN ), // Don't need to restore
 		//DEFINE_FIELD( CBasePlayer, m_nCustomSprayFrames, FIELD_INTEGER ), // Don't need to restore
 
 };
@@ -1959,6 +1964,61 @@ void CBasePlayer::PreThink()
 
 	if (g_fGameOver)
 		return; // intermission or finale
+
+	// PS2HLU
+	if ((pev->flags & FL_FAKECLIENT) == 0)
+	{
+		if (m_afButtonPressed & IN_ALT1 && pev->button & IN_ALT1 && m_iOnTarget != 0)
+		{
+			if (m_hAutoAimTarget == 0)
+			{
+				Vector vecSrc = GetGunPosition();
+				float flDist = 8192.0f;
+				float flDelta = AUTOAIM_22DEGREES;
+
+				switch (g_iSkillLevel)
+				{
+					case SKILL_EASY:
+						flDelta = AUTOAIM_45DEGREES;
+					break;
+					case SKILL_MEDIUM:
+						flDelta = AUTOAIM_22DEGREES;
+					break;
+					case SKILL_HARD:
+						flDelta = AUTOAIM_7POINT5DEGREES;
+					break;
+					default:
+					break;
+				}
+
+				SetAutoAimTarget(vecSrc, flDist, flDelta);
+			}
+			else
+			{
+				goto cleanup;
+			}
+		}
+		if (m_hAutoAimTarget != 0 && m_iOnTarget != 0)
+		{
+			if ( m_hTargetedEnemy == 0 || m_hTargetedEnemy && (!m_hTargetedEnemy->IsAlive() || m_hTargetedEnemy->pev->takedamage != DAMAGE_AIM))
+			{
+				m_hTargetedEnemy = 0;
+cleanup:
+				// In retail the owner is identified by their entindex
+				// in combination with bits 128 OR 256 in pev->effects of the targeting_spot
+				UTIL_Remove(m_hAutoAimTarget);
+				m_hAutoAimTarget = 0;
+				//m_iOnTarget = 0;
+			}
+			if ( m_hTargetedEnemy )
+			{
+				pev->angles = UTIL_VecToAngles(m_hTargetedEnemy->BodyTarget(m_hTargetedEnemy->pev->origin) - GetGunPosition());
+				pev->angles.z = 0; // no view roll
+				pev->angles.x = -pev->angles.x; // This behaves extremely weirdly with cl_lw set to 0
+				pev->fixangle = 1;
+			}
+		}
+	}
 
 	UTIL_MakeVectors(pev->v_angle); // is this still used?
 
@@ -4589,7 +4649,9 @@ void CBasePlayer::EnableControl(bool fControl)
 //=========================================================
 Vector CBasePlayer::GetAutoaimVector(float flDelta)
 {
-	if (g_iSkillLevel == SKILL_HARD)
+	// PS2HLU
+	// Fix inconsistent sv_aim behaviour
+	if (g_iSkillLevel == SKILL_HARD || g_psv_aim->value == 0.0f)
 	{
 		UTIL_MakeVectors(pev->v_angle + pev->punchangle);
 		return gpGlobals->v_forward;
@@ -4606,13 +4668,13 @@ Vector CBasePlayer::GetAutoaimVector(float flDelta)
 		// flDelta *= 0.5;
 	}
 
-	bool m_fOldTargeting = m_fOnTarget;
+	unsigned char m_fOldTargeting = m_iOnTarget;
 	Vector angles = AutoaimDeflection(vecSrc, flDist, flDelta);
 
 	// update ontarget if changed
 	if (!g_pGameRules->AllowAutoTargetCrosshair())
-		m_fOnTarget = false;
-	else if (m_fOldTargeting != m_fOnTarget)
+		m_iOnTarget = 0;
+	else if (m_fOldTargeting != m_iOnTarget)
 	{
 		m_pActiveItem->UpdateItemInfo();
 	}
@@ -4635,17 +4697,9 @@ Vector CBasePlayer::GetAutoaimVector(float flDelta)
 	if (angles.y < -12)
 		angles.y = -12;
 
-
-	// always use non-sticky autoaim
-	// UNDONE: use sever variable to chose!
-	if (false || g_iSkillLevel == SKILL_EASY)
-	{
-		m_vecAutoAim = m_vecAutoAim * 0.67 + angles * 0.33;
-	}
-	else
-	{
-		m_vecAutoAim = angles * 0.9;
-	}
+	// PS2HLU
+	// Always use this kind of autoaim
+	m_vecAutoAim = angles * 0.9;
 
 	// m_vecAutoAim = m_vecAutoAim * 0.99;
 
@@ -4695,7 +4749,7 @@ Vector CBasePlayer::AutoaimDeflection(Vector& vecSrc, float flDist, float flDelt
 
 	if (g_psv_aim->value == 0)
 	{
-		m_fOnTarget = false;
+		m_iOnTarget = 0;
 		return g_vecZero;
 	}
 
@@ -4706,8 +4760,10 @@ Vector CBasePlayer::AutoaimDeflection(Vector& vecSrc, float flDist, float flDelt
 	bestdot = flDelta; // +- 10 degrees
 	bestent = NULL;
 
-	m_fOnTarget = false;
-	m_bIsTargetFriendly = true;
+	// PS2HLU
+	// Only reset if we're not locked on
+	if (m_hAutoAimTarget == 0)
+		m_iOnTarget = 0;
 
 	// PS2HLU
 	// This code returns a zero vector if the players cursor is on the targeted entity,
@@ -4721,7 +4777,7 @@ Vector CBasePlayer::AutoaimDeflection(Vector& vecSrc, float flDist, float flDelt
 		if (!((pev->waterlevel != 3 && tr.pHit->v.waterlevel == 3) || (pev->waterlevel == 3 && tr.pHit->v.waterlevel == 0)))
 		{
 			if (tr.pHit->v.takedamage == DAMAGE_AIM)
-				m_fOnTarget = true;
+				m_iOnTarget = true;
 
 			return m_vecAutoAim;
 		}
@@ -4749,6 +4805,10 @@ Vector CBasePlayer::AutoaimDeflection(Vector& vecSrc, float flDist, float flDelt
 		pEntity = Instance(pEdict);
 		if (pEntity == NULL)
 			continue;
+
+		// PS2HLU
+		if (m_hAutoAimTarget && m_hTargetedEnemy)
+			pEntity = m_hTargetedEnemy;
 
 		if (!pEntity->IsAlive())
 			continue;
@@ -4788,10 +4848,6 @@ Vector CBasePlayer::AutoaimDeflection(Vector& vecSrc, float flDist, float flDelt
 				continue;
 		}
 
-		// PS2HLU
-		if (IRelationship(pEntity) > 0)
-			m_bIsTargetFriendly = false;
-
 		// can shoot at this one
 		bestdot = dot;
 		bestent = pEdict;
@@ -4805,7 +4861,17 @@ Vector CBasePlayer::AutoaimDeflection(Vector& vecSrc, float flDist, float flDelt
 		bestdir = bestdir - pev->v_angle - pev->punchangle;
 
 		if (bestent->v.takedamage == DAMAGE_AIM)
-			m_fOnTarget = true;
+		{
+			// PS2HLU
+			if (m_hAutoAimTarget == 0)
+			m_hTargetedEnemy = Instance(bestent);
+
+			// TODO: Is this correct?
+			// CLASS_NONE is identified as friendly when it should be enemy
+			m_iOnTarget = 2;
+			if (IRelationship(m_hTargetedEnemy) > 0 )
+				m_iOnTarget = 1;
+		}
 
 		return bestdir;
 	}
@@ -4827,8 +4893,42 @@ void CBasePlayer::ResetAutoaim()
 		WRITE_COORD(m_vecAutoAim.y);
 		MESSAGE_END();
 	}
-	m_fOnTarget = false;
-	m_bIsTargetFriendly = true;
+	// PS2HLU
+	// Don't reset it here
+	//m_iOnTarget = 0;
+	//m_hTargetedEnemy = NULL;
+}
+
+// PS2HLU
+void CBasePlayer::SetAutoAimTarget(Vector& vecSrc, float flDist, float flDelta)
+{
+	if (g_psv_aim->value == 0.0f)
+	{
+		m_iOnTarget = 0;
+		return;
+	}
+
+	if (m_hTargetedEnemy == 0)
+		return;
+
+	(void)AutoaimDeflection(vecSrc, flDist, flDelta);
+
+	// TODO: Is this correct?
+	// CLASS_NONE is identified as friendly when it should be enemy
+	m_iOnTarget = 2;
+	if (IRelationship(m_hTargetedEnemy) > 0 )
+		m_iOnTarget = 1;
+
+	// DEBUG
+	//ALERT(at_console, "spawned autoaim thing!\n");
+
+	// TODO: Track our HUD color somewhere!
+	// Also consider not having purely hardcoded HUD colors?
+	CTargetingSpot* pSpot = CTargetingSpot::CreateTargetingSpot(AimTargetColor::GORDON);
+	pSpot->SetTarget(m_hTargetedEnemy);
+
+	// We need to do a C-style cast otherwise the compiler won't shut up
+	m_hAutoAimTarget = (CBaseMonster*)pSpot;
 }
 
 /*
@@ -5077,6 +5177,10 @@ void CBasePlayer::EquipWeapon()
 	//No weapon equipped or couldn't deploy it, find a suitable alternative.
 	g_pGameRules->GetNextBestWeapon(this, m_pActiveItem, true);
 }
+
+constexpr unsigned int BIT_GPM_TOGGLE_CROUCH = 1;
+constexpr unsigned int BIT_GPM_CROUCH_JUMP = 2;
+constexpr unsigned int BIT_GPM_PC_TOGGLE_WALK = 4; // TODO: Consider adding this
 
 void CBasePlayer::SetPrefsFromUserinfo(char* infobuffer)
 {

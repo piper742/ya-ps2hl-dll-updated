@@ -128,7 +128,7 @@ public:
 		{
 			Vector attachmentVec;
 			Vector vecEmpty;
-			GetAttachment(numAttachments, attachmentVec, vecEmpty);
+			GetAttachment(numAttachments - 1, attachmentVec, vecEmpty);
 			return attachmentVec;
 		}
 		return Center() * 0.75 + EyePosition() * 0.25;

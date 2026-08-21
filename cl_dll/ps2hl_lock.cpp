@@ -43,7 +43,9 @@ bool CHudLock::Init(void)
 
 void CHudLock::Reset(void)
 {
-	m_fX = m_fY = m_iActive = 0;
+	m_fX = (ScreenWidth / 2) - ((m_rcCrosshair.right - m_rcCrosshair.left) / 2.0f);
+	m_fY = (ScreenHeight / 2) + ((m_rcCrosshair.bottom - m_rcCrosshair.top) / 2.0f);
+	m_iActive = 0;
 	framesRemaining = 1;
 }
 

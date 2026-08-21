@@ -195,10 +195,11 @@ public:
 	int m_rgAmmoLast[MAX_AMMO_SLOTS];
 
 	Vector m_vecAutoAim;
-	bool m_fOnTarget;
 
 	// PS2HLU
-	bool m_bIsTargetFriendly = true;
+	unsigned char m_iOnTarget;
+	EHANDLE m_hTargetedEnemy;
+	EHANDLE m_hAutoAimTarget;
 
 	int m_iDeaths;
 	float m_flRespawnTimer; // used in PlayerDeathThink() to make sure players can always respawn
@@ -330,6 +331,9 @@ public:
 	Vector GetAutoaimVector(float flDelta);
 	Vector AutoaimDeflection(Vector& vecSrc, float flDist, float flDelta);
 
+	// PS2HLU
+	void SetAutoAimTarget(Vector& vecSrc, float flDist, float flDelta);
+
 	void ForceClientDllUpdate(); // Forces all client .dll specific data to be resent to client.
 
 	void DeathMessage(entvars_t* pevKiller);
@@ -396,6 +400,11 @@ inline void CBasePlayer::SetHasSuit(bool hasSuit)
 #define AUTOAIM_5DEGREES 0.08715574274766
 #define AUTOAIM_8DEGREES 0.1391731009601
 #define AUTOAIM_10DEGREES 0.1736481776669
+
+// PS2HLU
+#define AUTOAIM_7POINT5DEGREES 0.1305261922201
+#define AUTOAIM_22DEGREES 0.3746065934159
+#define AUTOAIM_45DEGREES 0.7071067811865
 
 inline bool gInitHUD = true;
 inline bool gEvilImpulse101 = false;

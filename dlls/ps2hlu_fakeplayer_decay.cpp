@@ -322,7 +322,7 @@ void EXPORT CDecayBot::BotThink(void)
 #endif
 
 	Vector autoaim = GetAutoaimVector(3.1256671980042f);
-	if (m_fOnTarget && m_bIsTargetFriendly == false)
+	if (m_iOnTarget == 1)
 	{
 		auto desiredangle = UTIL_VecToAngles(autoaim);
 
@@ -341,7 +341,7 @@ void EXPORT CDecayBot::BotThink(void)
 		pev->angles.z = pev->v_angle.z = 0;
 
 		pev->fixangle = 1;
-		if (m_fOnTarget)
+		if (m_iOnTarget == 1)
 			PrimaryAttack();
 		else
 			ClearPrimaryAttack();
