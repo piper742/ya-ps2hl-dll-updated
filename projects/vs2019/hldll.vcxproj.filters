@@ -698,5 +698,8 @@
     <ClInclude Include="..\..\dlls\ps2hl_trigger_islave.h">
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\dlls\ps2hlu_targeting_spot.h">
+      <Filter>Header Files\dlls</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

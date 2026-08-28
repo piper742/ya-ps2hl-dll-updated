@@ -292,7 +292,7 @@ cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(SolutionDir)../../network" "" "delt
     <ClInclude Include="..\..\dlls\plane.h" />
     <ClInclude Include="..\..\dlls\player.h" />
     <ClInclude Include="..\..\dlls\ps2hlu_bot_decay.h" />
-    <ClCompile Include="..\..\dlls\ps2hlu_targeting_spot.h" />
+    <ClInclude Include="..\..\dlls\ps2hlu_targeting_spot.h" />
     <ClInclude Include="..\..\dlls\ps2hl_dbg.h" />
     <ClInclude Include="..\..\dlls\ps2hl_item_eyescanner.h" />
     <ClInclude Include="..\..\dlls\ps2hl_item_generic.h" />
