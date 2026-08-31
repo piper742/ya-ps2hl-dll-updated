@@ -187,6 +187,7 @@ cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(SolutionDir)../../network" "" "delt
     <ClCompile Include="..\..\dlls\ps2hlu_monster_alienflyer.cpp" />
     <ClCompile Include="..\..\dlls\ps2hlu_monster_modeltrain.cpp" />
     <ClCompile Include="..\..\dlls\ps2hlu_targeting_spot.cpp" />
+    <ClCompile Include="..\..\dlls\ps2hlu_item_slave_collar.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_bshift.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_dbg.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_env_warpball.cpp" />
