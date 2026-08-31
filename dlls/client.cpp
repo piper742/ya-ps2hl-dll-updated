@@ -582,6 +582,17 @@ void ClientCommand(edict_t* pEntity)
 			CLIENT_PRINTF(pEntity, print_console, UTIL_VarArgs("\"fov\" is \"%d\"\n", (int)player->m_iFOV));
 		}
 	}
+	// PS2HLU
+	else if (FStrEq(pcmd, "goto"))
+	{
+		// PC
+		// TODO: Disable this in multiplayer!
+		// We can re-enable this check if we're finally not forcing the co-op
+		// gamerules by mapname, instead we have "coop" convar hooked up in the menu
+		/*if (g_pGameRules->IsMultiplayer() == 0)*/
+		UTIL_SetOrigin(player->pev, Vector(atof(CMD_ARGV(1)),
+						atof(CMD_ARGV(2)),atof(CMD_ARGV(3))));
+	}
 	else if (FStrEq(pcmd, "use"))
 	{
 		player->SelectItem((char*)CMD_ARGV(1));
