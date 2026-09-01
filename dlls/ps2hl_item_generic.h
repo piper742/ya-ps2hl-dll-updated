@@ -28,7 +28,10 @@ private:
 	void Spawn(void);						// Spawn handler
 	void Precache(void);					// Precache handler
 	bool KeyValue(KeyValueData *pkvd);		// Parse keys
-	void Think(void);						// Think handler
+	void EXPORT AnimateThink(void);						// Think handler
+	
+	// PS2HLU
+	void EXPORT InitThink(void);
 
 	int m_iSequence;
 };

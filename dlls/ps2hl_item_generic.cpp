@@ -22,38 +22,19 @@ void CItemGeneric::Spawn(void)
 	// Set the model
 	SET_MODEL(ENT(pev), STRING(pev->model));
 
-	// Check if sequence is loaded
-	if (pev->sequence == -1)
-	{
-		// Failed to load sequence
-		ALERT(at_console, "item_generic: cant load animation sequence ...");
-		pev->sequence = 0;
-	}
-
-	// Prepare sequence
-	pev->sequence = LookupSequence(STRING(m_iSequence));
-	pev->frame = 0;
-	m_fSequenceLoops = 1;
-	ResetSequenceInfo();
-
 	// BBox
-	Vector Zero;
-	Zero.x = Zero.y = Zero.z = 0;
-	UTIL_SetSize(pev, Zero, Zero);
+	UTIL_SetSize(pev, g_vecZero, g_vecZero);
 	pev->solid = SOLID_NOT;
-	
-	// PS2HLU Drop to floor flag, required by Decay
-	if (FBitSet(pev->spawnflags, SF_ITEM_GENERIC_DROP_TO_FLOOR) && !FStrEq(STRING(pev->targetname), "satchel")) // PS2HLU satchel position fix for ht10focus
-	{
-		if( DROP_TO_FLOOR(ENT( pev ) ) == 0 )
-		{
-			ALERT(at_error, "Item %s fell out of level at %f,%f,%f\n", STRING( pev->classname ), pev->origin.x, pev->origin.y, pev->origin.z);
-			//UTIL_Remove( this );
-		}
-	}
 
-	// Set think delay
-	pev->nextthink = gpGlobals->time + ITGN_DELAY_THINK;
+	// PS2HLU
+	pev->movetype = MOVETYPE_NONE;
+	pev->effects = 0;
+	
+	if (m_iSequence || pev->spawnflags & SF_ITEM_GENERIC_DROP_TO_FLOOR)
+	{
+		SetThink(&CItemGeneric::InitThink);
+		pev->nextthink = gpGlobals->time + ITGN_DELAY_THINK;
+	}
 }
 
 // Parse keys
@@ -71,6 +52,13 @@ bool CItemGeneric::KeyValue(KeyValueData *pkvd)
 		pev->body = atoi(pkvd->szValue);
 		return true;
 	}
+	// PS2HLU
+	// set skin
+	else if (FStrEq(pkvd->szKeyName, "skin"))
+	{
+		pev->skin = (int)atof(pkvd->szValue);
+		return true;
+	}
 	else if (FStrEq(pkvd->szKeyName, "sequencename"))
 	{
 		// Set sequence
@@ -82,11 +70,55 @@ bool CItemGeneric::KeyValue(KeyValueData *pkvd)
 }
 
 // Think handler
-void CItemGeneric::Think(void)
+void CItemGeneric::AnimateThink(void)
 {
+	// Call animation handler
+	DispatchAnimEvents(0.1f);
+	StudioFrameAdvance(0);
+
+	if (m_fSequenceFinished && (m_fSequenceLoops == 0))
+	{
+		pev->frame = 0;
+		ResetSequenceInfo();
+	}
+
 	// Set delay
 	pev->nextthink = gpGlobals->time + ITGN_DELAY_THINK;
+}
 
-	// Call animation handler
-	StudioFrameAdvance(0);
+// PS2HLU
+// Later sequence init, fixes drop to floor
+// causing items to phase through brush entities
+void CItemGeneric::InitThink(void)
+{
+	// PS2HLU Drop to floor flag, required by Decay
+	if (FBitSet(pev->spawnflags, SF_ITEM_GENERIC_DROP_TO_FLOOR))
+	{
+		if( DROP_TO_FLOOR(ENT( pev ) ) == 0 )
+		{
+			ALERT(at_error, "Item %s fell out of level at %f,%f,%f\n", STRING( pev->classname ), pev->origin.x, pev->origin.y, pev->origin.z);
+			UTIL_Remove( this );
+		}
+	}
+
+	if (m_iSequence)
+	{
+		pev->effects = 0;
+		pev->sequence = LookupSequence(STRING(m_iSequence));
+
+		// Check if sequence is loaded
+		if (pev->sequence == -1)
+		{
+			// Failed to load sequence
+			ALERT(at_console, "item_generic: cant load animation sequence %s\n", STRING(m_iSequence));
+			pev->sequence = 0;
+		}
+
+		// Prepare sequence
+		pev->frame = 0;
+		ResetSequenceInfo();
+
+		SetThink(&CItemGeneric::AnimateThink);
+		pev->nextthink = gpGlobals->time + ITGN_DELAY_THINK;
+	}
 }
