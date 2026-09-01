@@ -29,6 +29,8 @@
 #include "maprules.h"
 #include "cbase.h"
 #include "player.h"
+#include "skill.h"
+#include "weapons.h"
 
 class CRuleEntity : public CBaseEntity
 {
@@ -846,7 +848,15 @@ void CGamePlayerEquip::EquipPlayer(CBaseEntity* pEntity)
 	{
 		if (FStringNull(m_weaponNames[i]))
 			break;
-		for (int j = 0; j < m_weaponCount[i]; j++)
+
+		// PS2HLU
+		// Skip annoying battery level voice lines
+		if (FStrEq(m_weaponNames[i], "item_battery"))
+		{
+			const float batteryLevel = V_max(V_min(m_weaponCount[i] * gSkillData.batteryCapacity, MAX_NORMAL_BATTERY), 0);
+			pPlayer->pev->armorvalue = batteryLevel;
+		}
+		else for (int j = 0; j < m_weaponCount[i]; j++)
 		{
 			pPlayer->GiveNamedItem(STRING(m_weaponNames[i]));
 		}
