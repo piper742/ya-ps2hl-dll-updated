@@ -410,6 +410,7 @@ void V_CalcViewRoll(struct ref_params_s* pparams)
 	if (!viewentity)
 		return;
 
+	// TODO: Do we keep this?
 	pparams->movevars->rollangle = cl_ps2hl_roll->value;
 	pparams->movevars->rollspeed = 300;
 	side = V_CalcRoll(viewentity->angles, pparams->simvel, cl_rollangle->value, cl_rollspeed->value);
@@ -659,13 +660,12 @@ void V_CalcNormalRefdef(struct ref_params_s* pparams)
 	}
 	view->origin[2] += bob;
 
-	// throw in a little tilt.
-	view->angles[YAW] -= bob * 0.5;
-	view->angles[ROLL] -= bob * 1;
-	view->angles[PITCH] -= bob * 0.3;
-
 	if (0 != cl_bobtilt->value)
 	{
+		// throw in a little tilt.
+		view->angles[YAW] -= bob * 0.5;
+		view->angles[ROLL] -= bob * 1;
+		view->angles[PITCH] -= bob * 0.3;
 		VectorCopy(view->angles, view->curstate.angles);
 	}
 

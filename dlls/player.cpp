@@ -765,7 +765,7 @@ void CBasePlayer::PackDeadPlayerItems()
 
 		if (iAmmoRules == GR_PLR_DROP_AMMO_ACTIVE && iWeaponRules == GR_PLR_DROP_GUN_ACTIVE)
 		{
-			if (FClassnameIs(rgpPackWeapons[0]->pev, "weapon_satchel") && (iPackAmmo[0] == -1 || (m_rgAmmo[iPackAmmo[0]] == 0)))
+			if (rgpPackWeapons[0] && FClassnameIs(rgpPackWeapons[0]->pev, "weapon_satchel") && (iPackAmmo[0] == -1 || (m_rgAmmo[iPackAmmo[0]] == 0)))
 			{
 				bPackItems = false;
 			}
@@ -773,24 +773,24 @@ void CBasePlayer::PackDeadPlayerItems()
 
 		if (bPackItems)
 		{
-	// pack the ammo
-	while (iPackAmmo[iPA] != -1)
-	{
-		pWeaponBox->PackAmmo(MAKE_STRING(CBasePlayerItem::AmmoInfoArray[iPackAmmo[iPA]].pszName), m_rgAmmo[iPackAmmo[iPA]]);
-		iPA++;
-	}
+			// pack the ammo
+			while (iPackAmmo[iPA] != -1)
+			{
+				pWeaponBox->PackAmmo(MAKE_STRING(CBasePlayerItem::AmmoInfoArray[iPackAmmo[iPA]].pszName), m_rgAmmo[iPackAmmo[iPA]]);
+				iPA++;
+			}
 
-	// now pack all of the items in the lists
-	while (rgpPackWeapons[iPW])
-	{
-		// weapon unhooked from the player. Pack it into der box.
-		pWeaponBox->PackWeapon(rgpPackWeapons[iPW]);
+			// now pack all of the items in the lists
+			while (rgpPackWeapons[iPW])
+			{
+				// weapon unhooked from the player. Pack it into der box.
+				pWeaponBox->PackWeapon(rgpPackWeapons[iPW]);
 
-		iPW++;
-	}
+				iPW++;
+			}
 		}
 
-	pWeaponBox->pev->velocity = pev->velocity * 1.2; // weaponbox has player's velocity, then some.
+		pWeaponBox->pev->velocity = pev->velocity * 1.2; // weaponbox has player's velocity, then some.
 	}
 
 	RemoveAllItems(true); // now strip off everything that wasn't handled by the code above.
@@ -1612,7 +1612,7 @@ void CBasePlayer::PlayerUse()
 						((CFuncVehicle*)pTrain)->m_pDriver = this;
 					}
 					else
-					EMIT_SOUND(ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
+						EMIT_SOUND(ENT(pev), CHAN_ITEM, "plats/train_use1.wav", 0.8, ATTN_NORM);
 					return;
 				}
 			}

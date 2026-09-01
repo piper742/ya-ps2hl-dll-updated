@@ -179,9 +179,6 @@ public:
 	virtual int Classify() { return CLASS_NONE; }
 	virtual void DeathNotice(entvars_t* pevChild) {} // monster maker children use this to tell the monster maker that they have died.
 
-	// PS2HLU
-	// SetColor function from CBeam
-	virtual void SetColor(int r, int g, int b) { pev->rendercolor.x = r; pev->rendercolor.y = g; pev->rendercolor.z = b; };
 
 	static TYPEDESCRIPTION m_SaveData[];
 

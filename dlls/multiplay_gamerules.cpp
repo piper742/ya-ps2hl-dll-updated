@@ -561,6 +561,8 @@ void CHalfLifeMultiplay::PlayerKilled(CBasePlayer* pVictim, entvars_t* pKiller, 
 
 	pVictim->m_iDeaths += 1;
 
+	FireTargets("game_playerdie", pVictim, pVictim, USE_TOGGLE, 0);
+
 	if (pVictim->pev == pKiller)
 	{ // killed self
 		pKiller->frags -= 1;

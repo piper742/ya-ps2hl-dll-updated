@@ -65,8 +65,6 @@ CSatchel g_Satchel;
 CTripmine g_Tripmine;
 CSqueak g_Snark;
 
-// PS2HLU
-#define CJUMP_BIT 2
 
 /*
 ======================
@@ -758,16 +756,6 @@ void HUD_WeaponsPostThink(local_state_s* from, local_state_s* to, usercmd_t* cmd
 	to->client.vuser1[0] = player.ammo_9mm;
 	to->client.vuser1[1] = player.ammo_357;
 	to->client.vuser1[2] = player.ammo_argrens;
-
-	// PS2HLU
-	// UGHH is there really no better solution than to
-	// check this & set variable at 2 places?
-#if defined(CLIENT_WEAPONS)
-	if (cl_cjump_style && cl_cjump_style->value != 0)
-		to->client.iuser4 |= CJUMP_BIT;
-	else
-		to->client.iuser4 &= ~CJUMP_BIT;
-#endif
 
 	to->client.ammo_nails = player.ammo_bolts;
 	to->client.ammo_shells = player.ammo_buckshot;
