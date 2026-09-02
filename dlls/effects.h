@@ -218,3 +218,61 @@ public:
 	int m_iszSpriteName;
 	Vector m_firePosition;
 };
+
+// PS2HLU
+// Why was this in the .cpp file?
+class CLightning : public CBeam
+{
+public:
+	void Spawn() override;
+	void Precache() override;
+	bool KeyValue(KeyValueData* pkvd) override;
+	void Activate() override;
+
+	void EXPORT StrikeThink();
+	void EXPORT DamageThink();
+	void RandomArea();
+	void RandomPoint(Vector& vecSrc);
+	void Zap(const Vector& vecSrc, const Vector& vecDest);
+	void EXPORT StrikeUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value);
+	void EXPORT ToggleUse(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value);
+
+	inline bool ServerSide()
+	{
+		if (m_life == 0 && (pev->spawnflags & SF_BEAM_RING) == 0)
+			return true;
+		return false;
+	}
+
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+	static TYPEDESCRIPTION m_SaveData[];
+
+	// PS2HLU
+	static CLightning* LightningCreate(const char* pSpriteName, int width)
+	{
+		auto lightning = GetClassPtr<CLightning>(nullptr);
+
+		lightning->BeamInit(pSpriteName, width);
+
+		return lightning;
+	}
+
+	void BeamUpdateVars();
+
+	bool m_active;
+	int m_iszStartEntity;
+	int m_iszEndEntity;
+	float m_life;
+	int m_boltWidth;
+	int m_noiseAmplitude;
+	int m_brightness;
+	int m_speed;
+	float m_restrike;
+	int m_spriteTexture;
+	int m_iszSpriteName;
+	int m_frameStart;
+
+	float m_radius;
+};
+

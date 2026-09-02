@@ -188,9 +188,9 @@ cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(SolutionDir)../../network" "" "delt
     <ClCompile Include="..\..\dlls\ps2hlu_monster_modeltrain.cpp" />
     <ClCompile Include="..\..\dlls\ps2hlu_targeting_spot.cpp" />
     <ClCompile Include="..\..\dlls\ps2hlu_item_slave_collar.cpp" />
+    <ClCompile Include="..\..\dlls\ps2hlu_env_warpball.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_bshift.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_dbg.cpp" />
-    <ClCompile Include="..\..\dlls\ps2hl_env_warpball.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_item_eyescanner.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_item_generic.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_item_healthcharger.cpp" />
@@ -294,6 +294,7 @@ cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(SolutionDir)../../network" "" "delt
     <ClInclude Include="..\..\dlls\player.h" />
     <ClInclude Include="..\..\dlls\ps2hlu_bot_decay.h" />
     <ClInclude Include="..\..\dlls\ps2hlu_targeting_spot.h" />
+    <ClInclude Include="..\..\dlls\ps2hlu_env_warpball.h" />
     <ClInclude Include="..\..\dlls\ps2hl_dbg.h" />
     <ClInclude Include="..\..\dlls\ps2hl_item_eyescanner.h" />
     <ClInclude Include="..\..\dlls\ps2hl_item_generic.h" />

@@ -384,7 +384,7 @@
     <ClCompile Include="..\..\dlls\ps2hlu_monster_modeltrain.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\dlls\ps2hl_env_warpball.cpp">
+    <ClCompile Include="..\..\dlls\ps2hlu_env_warpball.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
     <ClCompile Include="..\..\dlls\ps2hl_item_generic.cpp">
@@ -702,6 +702,9 @@
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dlls\ps2hlu_targeting_spot.h">
+      <Filter>Header Files\dlls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ps2hlu_env_warpball.h">
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
   </ItemGroup>
