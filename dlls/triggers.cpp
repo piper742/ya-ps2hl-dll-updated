@@ -2583,45 +2583,46 @@ void CTriggerCamera::Move()
 // PS2HLU trigger_bit & trigger_bit_counter
 // These entities are used in ht11lasers for the laser control panel
 
-class CTriggerBit : public CBaseDelay
+class CTriggerBit : public CPointEntity
 {
 public:
 	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
-private:
-	bool boolean = true;
 };
 
-LINK_ENTITY_TO_CLASS( trigger_bit, CTriggerBit )
+LINK_ENTITY_TO_CLASS( trigger_bit, CTriggerBit );
 
 void CTriggerBit::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	ALERT(at_console, "pev skin: %f\n", (float)pev->skin);
+	//ALERT(at_console, "pev skin: %f\n", (float)pev->skin);
 
-	boolean = !boolean;
-
-	if(boolean)
-	SUB_UseTargets( this, USE_TOGGLE, (float)pev->skin ); // This still requires some investigation
-	else
-	SUB_UseTargets(this, USE_TOGGLE, -(float)pev->skin);
-
+	if (FStringNull(pev->target) == 0)
+		SUB_UseTargets( this, USE_TOGGLE, 0 );
 }
-
-
 
 class CTriggerBitCounter : public CPointEntity
 {
 public:
 	bool KeyValue( KeyValueData *pkvd );
 	void Spawn();
-        void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+  void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+
+	bool Save(CSave& save) override;
+	bool Restore(CRestore& restore) override;
+
+	static TYPEDESCRIPTION m_SaveData[];
 
 private:
-	//int m_initialstate;
-	float bits = 0;
-	float m_iDesiredBit = 0;
+	int m_iDesiredBit = 0;
 };
 
-LINK_ENTITY_TO_CLASS( trigger_bit_counter, CTriggerBitCounter )
+LINK_ENTITY_TO_CLASS( trigger_bit_counter, CTriggerBitCounter );
+
+TYPEDESCRIPTION CTriggerBitCounter::m_SaveData[] =
+{
+		DEFINE_FIELD(CTriggerBitCounter, m_iDesiredBit, FIELD_INTEGER),
+};
+
+IMPLEMENT_SAVERESTORE(CTriggerBitCounter, CPointEntity);
 
 bool CTriggerBitCounter::KeyValue( KeyValueData *pkvd )
 {
@@ -2636,40 +2637,22 @@ bool CTriggerBitCounter::KeyValue( KeyValueData *pkvd )
 
 void CTriggerBitCounter::Spawn()
 {
-	/*
-	if( !m_globalstate )
-	{
-		REMOVE_ENTITY( ENT( pev ) );
-		return;
-	}*/
-
 	pev->solid = SOLID_NOT;
 	pev->movetype = MOVETYPE_NONE;
-	bits = pev->skin;
-
-	SetUse(&CTriggerBitCounter::Use);
 
 	pev->nextthink = gpGlobals->time + 0.1;
 }
 
 void CTriggerBitCounter::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	//int oldState, newState;
-
-	if( !pActivator )
+	if( !pCaller )
 		return;
 
-	bits = bits + value;
-	//m_iDesiredBit++;
-	//value--;
+	pev->skin ^= pCaller->pev->skin;
 
-	//ALERT(at_console, "bitcounter target value is: %f\n", value);
-	//ALERT(at_console, "bitcounter desired bit is: %f\n", m_iDesiredBit);
-	//ALERT(at_console, "bitcounter use ran!\n");
-	ALERT(at_console, "bitcounter bits value is:%f\n", bits);
-	if (m_iDesiredBit == bits)
-		SUB_UseTargets( this, USE_TOGGLE, pev->skin );
-		//FireTargets(STRING(pev->target), this, this, USE_TOGGLE, 0);
+	//ALERT(at_console, "bitcounter bits value is:%i\n", pev->skin);
+	if (pev->skin == m_iDesiredBit)
+		SUB_UseTargets( this, USE_TOGGLE, 0 );
 }
 
 #include "shake.h"
@@ -2696,7 +2679,7 @@ private:
 	int m_Nextmap; //string_t
 };
 
-LINK_ENTITY_TO_CLASS(trigger_enddecay, CTriggerEndDecay)
+LINK_ENTITY_TO_CLASS(trigger_enddecay, CTriggerEndDecay);
 
 bool CTriggerEndDecay::KeyValue(KeyValueData *pkvd)
 {
