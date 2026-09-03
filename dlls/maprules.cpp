@@ -851,7 +851,7 @@ void CGamePlayerEquip::EquipPlayer(CBaseEntity* pEntity)
 
 		// PS2HLU
 		// Skip annoying battery level voice lines
-		if (FStrEq(m_weaponNames[i], "item_battery"))
+		if (FStrEq(STRING(m_weaponNames[i]), "item_battery"))
 		{
 			const float batteryLevel = V_max(V_min(m_weaponCount[i] * gSkillData.batteryCapacity, MAX_NORMAL_BATTERY), 0);
 			pPlayer->pev->armorvalue = batteryLevel;
