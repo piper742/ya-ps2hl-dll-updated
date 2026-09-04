@@ -420,6 +420,9 @@
     <ClCompile Include="..\..\dlls\ps2hlu_item_slave_collar.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\dlls\ps2hlu_useable_graphic.cpp">
+      <Filter>Source Files\dlls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\dlls\doors.h">
@@ -705,6 +708,9 @@
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dlls\ps2hlu_env_warpball.h">
+      <Filter>Header Files\dlls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ps2hlu_useable_graphic.h">
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
   </ItemGroup>

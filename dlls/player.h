@@ -201,6 +201,10 @@ public:
 	EHANDLE m_hTargetedEnemy;
 	EHANDLE m_hAutoAimTarget;
 
+	EHANDLE m_hUseableHighlight;
+	EHANDLE m_hLastUseableItem;
+	float m_flNextUseableCheck;
+
 	int m_iDeaths;
 	float m_flRespawnTimer; // used in PlayerDeathThink() to make sure players can always respawn
 
@@ -333,6 +337,8 @@ public:
 
 	// PS2HLU
 	void SetAutoAimTarget(Vector& vecSrc, float flDist, float flDelta);
+	void CheckUseableObjects();
+	void CreateUseableHighlight(CBaseEntity* pTarget);
 
 	void ForceClientDllUpdate(); // Forces all client .dll specific data to be resent to client.
 

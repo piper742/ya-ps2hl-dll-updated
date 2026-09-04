@@ -42,6 +42,7 @@
 #include "UserMessages.h"
 #include "client.h"
 #include "ps2hlu_targeting_spot.h"
+#include "ps2hlu_useable_graphic.h"
 
 // #define DUCKFIX
 
@@ -2198,6 +2199,11 @@ cleanup:
 	{
 		pev->velocity = g_vecZero;
 	}
+
+	// PS2HLU
+	// Used only for displaying the interactible
+	// object highlight/graphic
+	CheckUseableObjects();
 }
 
 /* Time based Damage works as follows: 
@@ -3216,6 +3222,10 @@ void CBasePlayer::Spawn()
 	else
 		SetBodygroup(0, 0);
 
+	// recheck instantly!
+	m_flNextUseableCheck = 0.0f;
+	m_hUseableHighlight = 0;
+	m_hLastUseableItem = 0;
 }
 
 
@@ -5218,6 +5228,89 @@ void CBasePlayer::SetPrefsFromUserinfo(char* infobuffer)
 	snprintf(finalFlag, sizeof(finalFlag), "%u", gamepadPhysicsMode);
 	//ALERT(at_console, "gpm flag: %s\n", finalFlag);
 	g_engfuncs.pfnSetPhysicsKeyValue(edict(), "gpm", finalFlag);
+}
+
+// PS2HLU
+// Spawnflag 512 can be used to prevent the highlight
+// from appearing on buttons/objects
+void CBasePlayer::CheckUseableObjects()
+{
+	if (gpGlobals->time >= m_flNextUseableCheck)
+	{
+		m_flNextUseableCheck = gpGlobals->time + 0.2f;
+		UTIL_MakeVectors(pev->v_angle);
+
+		CBaseEntity* pObject = NULL;
+		CBaseEntity* pClosest = NULL;
+		Vector vecLOS;
+		float flMaxDot = VIEW_FIELD_NARROW;
+		float flDot;
+
+		UTIL_MakeVectors(pev->v_angle); // so we know which way we are facing
+
+		while ((pObject = UTIL_FindEntityInSphere(pObject, pev->origin, PLAYER_SEARCH_RADIUS)) != NULL)
+		{
+			// Did I get all the checks?
+			// Seems fine so far... good enough
+			if ((pObject->ObjectCaps() & (FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE)) != 0 &&
+					FClassnameIs(pObject->pev, "func_pushable") == 0 &&
+					(pObject->pev->spawnflags & 0x200) == 0 && pObject->IsAlive() == 0)
+			{
+				// !!!PERFORMANCE- should this check be done on a per case basis AFTER we've determined that
+				// this object is actually usable? This dot is being done for every object within PLAYER_SEARCH_RADIUS
+				// when player hits the use key. How many objects can be in that area, anyway? (sjb)
+				vecLOS = (VecBModelOrigin(pObject->pev) - (pev->origin + pev->view_ofs));
+
+				// This essentially moves the origin of the target to the corner nearest the player to test to see
+				// if it's "hull" is in the view cone
+				vecLOS = UTIL_ClampVectorToBox(vecLOS, pObject->pev->size * 0.5);
+
+				flDot = DotProduct(vecLOS, gpGlobals->v_forward);
+				if (flDot > flMaxDot)
+				{ // only if the item is in front of the user
+					pClosest = pObject;
+					flMaxDot = flDot;
+					//				ALERT( at_console, "%s : %f\n", STRING( pObject->pev->classname ), flDot );
+				}
+				//			ALERT( at_console, "%s : %f\n", STRING( pObject->pev->classname ), flDot );
+			}
+		}
+		pObject = pClosest;
+
+		if (pObject)
+		{
+			CreateUseableHighlight(pObject);
+		}
+		else
+		{
+			if (m_hUseableHighlight)
+			{
+				UTIL_Remove(m_hUseableHighlight);
+				m_hLastUseableItem = 0;
+			}
+		}
+	}
+}
+
+// PS2HLU
+void CBasePlayer::CreateUseableHighlight(CBaseEntity* pTarget)
+{
+	if (pTarget == nullptr)
+		return;
+
+	if (m_hLastUseableItem == pTarget)
+		return;
+
+	if (m_hUseableHighlight)
+	{
+		UTIL_Remove(m_hUseableHighlight);
+		m_hLastUseableItem = 0;
+	}
+
+	// TODO: Handle HUD colors!
+	//ALERT(at_console, "DBG: created a useable highlight!\n");
+	m_hUseableHighlight = CUseableGraphic::CreateUseableGraphic(pTarget, UseableGraphicColor::GORDON);
+	m_hLastUseableItem = pTarget;
 }
 
 //=========================================================

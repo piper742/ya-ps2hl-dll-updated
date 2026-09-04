@@ -359,6 +359,7 @@ void W_Precache()
 	PRECACHE_SOUND("items/weapondrop1.wav"); // weapon falls to the ground
 	
 	UTIL_PrecacheOther("targeting_spot");
+	UTIL_PrecacheOther("useable_graphic");
 }
 
 

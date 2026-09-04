@@ -107,6 +107,7 @@ HLDLL_OBJS = \
 	$(HLDLL_OBJ_DIR)/ps2hlu_targeting_spot.o \
 	$(HLDLL_OBJ_DIR)/ps2hlu_item_slave_collar.o \
 	$(HLDLL_OBJ_DIR)/ps2hlu_env_warpball.o \
+	$(HLDLL_OBJ_DIR)/ps2hlu_useable_graphic.o \
 	$(HLDLL_OBJ_DIR)/python.o \
 	$(HLDLL_OBJ_DIR)/rat.o \
 	$(HLDLL_OBJ_DIR)/roach.o \
