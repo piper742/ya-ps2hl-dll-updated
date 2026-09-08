@@ -309,6 +309,9 @@
     <ClCompile Include="..\..\game_shared\filesystem_utils.cpp">
       <Filter>Source Files\game_shared</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\game_shared\ps2hlu_lod_manager.cpp">
+      <Filter>Source Files\game_shared</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\cl_dll\particleman\CMiniMem.cpp">
       <Filter>Source Files\cl_dll\particleman</Filter>
     </ClCompile>
@@ -579,6 +582,9 @@
       <Filter>Header Files\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\game_shared\filesystem_utils.h">
+      <Filter>Header Files\game_shared</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\game_shared\ps2hlu_lod_manager.h">
       <Filter>Header Files\game_shared</Filter>
     </ClInclude>
     <ClInclude Include="..\..\public\interface.h">

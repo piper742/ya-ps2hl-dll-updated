@@ -90,11 +90,12 @@ enum class FileContentFormat
 *	@param fileName Name of the file to load.
 *	@param format If @c FileContentFormat::Text, a null terminator will be appended.
 *	@param pathID If not null, only looks for the file in this search path.
+*	@param silent If true nothing is printed to the console upon load fail
 *	@return If the file was successfully loaded the contents of the buffer,
 *		with a zero byte (null terminator) appended to it if @p format is @c FileContentFormat::Text.
 *		If the file could not be loaded an empty buffer is returned.
 */
-std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileContentFormat format, const char* pathID = nullptr);
+std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileContentFormat format, const char* pathID = nullptr, bool silent = false);
 
 /**
 *	@brief Writes a text file to disk.

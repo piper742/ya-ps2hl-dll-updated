@@ -21,7 +21,15 @@
 #include "StudioModelRenderer.h"
 #include "GameStudioModelRenderer.h"
 
+#include "ps2hlu_lod_manager.h"
+extern Vector v_origin;
+
+
 extern cvar_t* tfc_newmodels;
+
+// PS2HLU
+extern cvar_t* showtriggers;
+extern cvar_t* gl_lod;
 
 extern extra_player_info_t g_PlayerExtraInfo[MAX_PLAYERS_HUD + 1];
 
@@ -52,9 +60,6 @@ void CStudioModelRenderer::Init()
 	m_pCvarDeveloper = IEngineStudio.GetCvar("developer");
 	m_pCvarDrawEntities = IEngineStudio.GetCvar("r_drawentities");
 
-	// PS2HLU DEBUG
-	// Command to show triggers
-	m_pCvarShowTriggers = IEngineStudio.GetCvar("showtriggers");
 	m_pChromeSprite = IEngineStudio.GetChromeSprite();
 
 	IEngineStudio.GetModelCounters(&m_pStudioModelCount, &m_pModelsDrawn);
@@ -1663,6 +1668,56 @@ void CStudioModelRenderer::StudioRenderFinal_Software()
 	{
 		for (i = 0; i < m_pStudioHeader->numbodyparts; i++)
 		{
+			// PS2HLU
+			// Handle LOD data
+			// TODO: TEST SOFTWARE MODE!!!
+			if (gl_lod && gl_lod->value != 0)
+			{
+				if (const auto* pLOD = CLodManager::getInstance().GetLODData(m_pCurrentEntity->curstate.modelindex, m_pCurrentEntity->model->name); pLOD != nullptr)
+				{
+					// Due to the way I chose to represent the data (vectors) MaxBodyParts
+					// cannot be trusted for safe access, but keep it around in case someone
+					// is using the mod for testing their .inf files
+					if ((i >= pLOD->groups.size() || i > pLOD->MaxBodyParts) == 0)
+					{
+						// PS2HLU
+						// We need to grab it like this, since IEngineStudio.StudioSetupModel returns something with a garbage ->base variable.
+						// Still, the engine is fine with that one, but sadly it ruins my bodygroup calculations
+						const mstudiobodyparts_t* body = (mstudiobodyparts_t*)((byte*)m_pStudioHeader + m_pStudioHeader->bodypartindex) + i;
+
+						//gEngfuncs.Con_DPrintf("base: %i, nummodels: %i\n", body->base, body->nummodels);
+						//gEngfuncs.Con_Printf("model: %s, body: %i, i: %i\n", m_pCurrentEntity->model->name, m_pCurrentEntity->curstate.body, i);
+
+						// Grabbed from animation.cpp
+						const int iGroup = (m_pCurrentEntity->curstate.body / body->base) % body->nummodels;
+						// Bodygroup without LOD data
+						const int realGroup = iGroup / (pLOD->groups[i].table[0].LodCount + 1);
+
+						if (realGroup < pLOD->groups[i].table.size())
+						{
+							// TODO: Is this the order in which it gets checked on PS2?
+							// I'm using this order since it would make sense in large open spaces with lots of
+							// distant models, but then again the main Half-Life campaign is mostly corridors where
+							// you're usually pretty close to the enemies.
+							for (int j = pLOD->groups[i].table.at(realGroup).LodCount - 1; j >= 0; j--)
+							{
+								Vector vecDist;
+
+								VectorSubtract(m_pCurrentEntity->origin, v_origin, vecDist);
+								if (Length(vecDist) >= pLOD->groups[i].table[realGroup].dist[j])
+								{
+									m_pCurrentEntity->curstate.body = m_pCurrentEntity->curstate.body - (iGroup * body->base) + ((iGroup + j + 1) * body->base);
+									break;
+								}
+							}
+								//gEngfuncs.Con_DPrintf("base: %i, nummodels: %i\n", body->base, body->nummodels);
+								//gEngfuncs.Con_Printf("model: %s, body: %i, i: %i, curGroup: %i\n", m_pCurrentEntity->model->name, m_pCurrentEntity->curstate.body, i, curGroup);
+							//gEngfuncs.Con_Printf("iGroup: %i, iGroup2: %i\n", iGroup, iGroup2);
+						}
+					}
+				}
+			}
+
 			IEngineStudio.StudioSetupModel(i, (void**)&m_pBodyPart, (void**)&m_pSubModel);
 			IEngineStudio.StudioDrawPoints();
 		}
@@ -1709,6 +1764,55 @@ void CStudioModelRenderer::StudioRenderFinal_Hardware()
 	{
 		for (i = 0; i < m_pStudioHeader->numbodyparts; i++)
 		{
+			// PS2HLU
+			// Handle LOD data
+			if (gl_lod && gl_lod->value != 0)
+			{
+				if (const auto* pLOD = CLodManager::getInstance().GetLODData(m_pCurrentEntity->curstate.modelindex, m_pCurrentEntity->model->name); pLOD != nullptr)
+				{
+					// Due to the way I chose to represent the data (vectors) MaxBodyParts
+					// cannot be trusted for safe access, but keep it around in case someone
+					// is using the mod for testing their .inf files
+					if ((i >= pLOD->groups.size() || i > pLOD->MaxBodyParts) == 0)
+					{
+						// PS2HLU
+						// We need to grab it like this, since IEngineStudio.StudioSetupModel returns something with a garbage ->base variable.
+						// Still, the engine is fine with that one, but sadly it ruins my bodygroup calculations
+						const mstudiobodyparts_t* body = (mstudiobodyparts_t*)((byte*)m_pStudioHeader + m_pStudioHeader->bodypartindex) + i;
+
+						//gEngfuncs.Con_DPrintf("base: %i, nummodels: %i\n", body->base, body->nummodels);
+						//gEngfuncs.Con_Printf("model: %s, body: %i, i: %i\n", m_pCurrentEntity->model->name, m_pCurrentEntity->curstate.body, i);
+
+						// Grabbed from animation.cpp
+						const int iGroup = (m_pCurrentEntity->curstate.body / body->base) % body->nummodels;
+						// Bodygroup without LOD data
+						const int realGroup = iGroup / (pLOD->groups[i].table[0].LodCount + 1);
+
+						if (realGroup < pLOD->groups[i].table.size())
+						{
+							// TODO: Is this the order in which it gets checked on PS2?
+							// I'm using this order since it would make sense in large open spaces with lots of
+							// distant models, but then again the main Half-Life campaign is mostly corridors where
+							// you're usually pretty close to the enemies.
+							for (int j = pLOD->groups[i].table.at(realGroup).LodCount - 1; j >= 0; j--)
+							{
+								Vector vecDist;
+
+								VectorSubtract(m_pCurrentEntity->origin, v_origin, vecDist);
+								if (Length(vecDist) >= pLOD->groups[i].table[realGroup].dist[j])
+								{
+									m_pCurrentEntity->curstate.body = m_pCurrentEntity->curstate.body - (iGroup * body->base) + ((iGroup + j + 1) * body->base);
+									break;
+								}
+							}
+								//gEngfuncs.Con_DPrintf("base: %i, nummodels: %i\n", body->base, body->nummodels);
+								//gEngfuncs.Con_Printf("model: %s, body: %i, i: %i, curGroup: %i\n", m_pCurrentEntity->model->name, m_pCurrentEntity->curstate.body, i, curGroup);
+							//gEngfuncs.Con_Printf("iGroup: %i, iGroup2: %i\n", iGroup, iGroup2);
+						}
+					}
+				}
+			}
+
 			IEngineStudio.StudioSetupModel(i, (void**)&m_pBodyPart, (void**)&m_pSubModel);
 
 			if (m_fDoInterp)
@@ -1728,6 +1832,11 @@ void CStudioModelRenderer::StudioRenderFinal_Hardware()
 		gEngfuncs.pTriAPI->RenderMode(kRenderTransAdd);
 		IEngineStudio.StudioDrawHulls();
 		gEngfuncs.pTriAPI->RenderMode(kRenderNormal);
+	}
+
+	if (m_pCvarDrawEntities->value == 5)
+	{
+		IEngineStudio.StudioDrawAbsBBox();
 	}
 
 	IEngineStudio.RestoreRenderer();

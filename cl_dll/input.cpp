@@ -21,6 +21,8 @@
 #include "vgui_TeamFortressViewport.h"
 #include "filesystem_utils.h"
 
+// PS2HLU
+#include "ps2hlu_lod_manager.h"
 
 extern bool g_iAlive;
 
@@ -1026,6 +1028,10 @@ void DLLEXPORT HUD_Shutdown()
 
 	ShutdownInput();
 
+	// PS2HLU
+	// Probably unnecessary, but I think it's better to have the
+	// cache freed, even if possibly the singleton itself isn't
+	CLodManager::getInstance().FlushCache();
 
 	FileSystem_FreeFileSystem();
 	CL_UnloadParticleMan();

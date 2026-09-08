@@ -2334,7 +2334,7 @@ bool CGraph::FLoadGraph(const char* szMapName)
 
 	//Note: Allow loading graphs only from the mod directory itself.
 	//Do not allow loading from other games since they may have a different graph format.
-	const auto buffer = FileSystem_LoadFileIntoBuffer(fileName.c_str(), FileContentFormat::Binary, "GAMECONFIG");
+	const auto buffer = FileSystem_LoadFileIntoBuffer(fileName.c_str(), FileContentFormat::Binary, "GAMECONFIG", false);
 
 	if (buffer.empty())
 	{

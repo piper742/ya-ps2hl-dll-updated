@@ -22,6 +22,8 @@
 #include "animation.h"
 #include "scriptevent.h"
 
+#include "ps2hlu_lod_manager.h"
+
 #pragma warning(disable : 4244)
 
 
@@ -457,7 +459,7 @@ int FindTransition(void* pmodel, int iEndingAnim, int iGoalAnim, int* piDir)
 	return iGoalAnim;
 }
 
-void SetBodygroup(void* pmodel, entvars_t* pev, int iGroup, int iValue)
+void SetBodygroup_real(void* pmodel, entvars_t* pev, int iGroup, int iValue)
 {
 	studiohdr_t* pstudiohdr;
 
@@ -478,8 +480,34 @@ void SetBodygroup(void* pmodel, entvars_t* pev, int iGroup, int iValue)
 	pev->body = (pev->body - (iCurrent * pbodypart->base) + (iValue * pbodypart->base));
 }
 
+// PS2HLU
+void SetBodygroup(void* pmodel, entvars_t* pev, int iGroup, int iValue)
+{
+	int fixedValue = iValue;
 
-int GetBodygroup(void* pmodel, entvars_t* pev, int iGroup)
+	ALERT(at_console, "Setbodygroup called for %s with modelindex of: %i\n", STRING(pev->model), pev->modelindex);
+
+	// PS2HLU
+	// I've not yet located where this code actually is, but pev->body does actually get reset to zero if it's -1
+	if (pev->body == -1)
+		pev->body = 0;
+
+	if (auto rs = CLodManager::getInstance().GetLODData(pev->modelindex, STRING(pev->model)); rs != nullptr)
+	{
+		if (iValue > rs->MaxBodyParts)
+			return;
+
+		if (iGroup <= rs->NumBodyGroups && rs->groups[iGroup].table.empty() == 0)
+		{
+			fixedValue *= rs->groups[iGroup].table[0].LodCount + 1;
+			ALERT(at_console, "Setting: %s to: part %i, submodel %i -> %i\n", STRING(pev->model), iGroup, iValue, fixedValue);
+		}
+	}
+
+	SetBodygroup_real(pmodel, pev, iGroup, fixedValue);
+}
+
+int GetBodygroup_real(void* pmodel, entvars_t* pev, int iGroup)
 {
 	studiohdr_t* pstudiohdr;
 
@@ -499,3 +527,17 @@ int GetBodygroup(void* pmodel, entvars_t* pev, int iGroup)
 
 	return iCurrent;
 }
+
+// PS2HLU
+int GetBodygroup(void* pmodel, entvars_t* pev, int iGroup)
+{
+	int res = GetBodygroup_real(pmodel, pev, iGroup);
+
+	if (auto rs = CLodManager::getInstance().GetLODData(pev->modelindex, STRING(pev->model)); rs != nullptr)
+	{
+		res /= (rs->groups[iGroup].table[0].LodCount + 1);
+	}
+
+	return res;
+}
+

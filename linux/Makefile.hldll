@@ -149,7 +149,8 @@ PM_OBJS = \
 
 GAME_SHARED_OBJS = \
 	$(GAME_SHARED_OBJ_DIR)/filesystem_utils.o \
-	$(GAME_SHARED_OBJ_DIR)/voice_gamemgr.o
+	$(GAME_SHARED_OBJ_DIR)/voice_gamemgr.o \
+	$(GAME_SHARED_OBJ_DIR)/ps2hlu_lod_manager.o
 
 PUBLIC_OBJS = \
 	$(PUBLIC_OBJ_DIR)/interface.o \

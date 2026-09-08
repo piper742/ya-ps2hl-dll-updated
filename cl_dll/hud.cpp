@@ -34,6 +34,7 @@
 #include "event_api.h"
 #include "particleman.h"
 #include "r_studioint.h"
+#include "ps2hlu_lod_manager.h"
 
 extern engine_studio_api_t IEngineStudio;
 
@@ -97,6 +98,8 @@ cvar_t* r_decals = nullptr;
 
 // PS2HLU
 cvar_t* cl_cjump_style = nullptr;
+cvar_t* showtriggers = nullptr;
+cvar_t* gl_lod = nullptr;
 
 void ShutdownInput();
 
@@ -176,6 +179,12 @@ void __CmdFunc_ForceCloseCommandMenu()
 	{
 		gViewPort->HideCommandMenu();
 	}
+}
+
+// PS2HLU
+void __CmdFunc_FlushLodCache()
+{
+	CLodManager::getInstance().FlushCache();
 }
 
 // TFFree Command Menu Message Handlers
@@ -496,6 +505,10 @@ void CHud::Init()
 	HOOK_COMMAND("ForceCloseCommandMenu", ForceCloseCommandMenu);
 	HOOK_COMMAND("special", InputPlayerSpecial);
 
+	// PS2HLU
+	// Allow flushing LOD cache
+	HOOK_COMMAND("flushlodcache", FlushLodCache);
+
 	HOOK_MESSAGE(ValClass);
 	HOOK_MESSAGE(TeamNames);
 	HOOK_MESSAGE(Feign);
@@ -555,6 +568,8 @@ void CHud::Init()
 	m_pCvarCrosshair = gEngfuncs.pfnGetCvarPointer("crosshair");
 	cl_cjump_style = CVAR_CREATE("cl_cjump_style", "1", FCVAR_ARCHIVE | FCVAR_USERINFO);
 	//CVAR_CREATE("cl_crouch_toggle", "0", FCVAR_ARCHIVE | FCVAR_USERINFO); // TODO
+	showtriggers = gEngfuncs.pfnGetCvarPointer("showtriggers");
+	gl_lod = CVAR_CREATE("gl_lod", "1", FCVAR_ARCHIVE);
 
 	m_pSpriteList = NULL;
 

@@ -24,6 +24,10 @@
 #include "entity_state.h"
 #include "r_efx.h"
 
+#include "ps2hlu_lod_manager.h"
+
+extern cvar_t* gl_lod;
+
 // g_runfuncs is true if this is the first time we've "predicated" a particular movement/firing
 //  command.  If it is 1, then we should play events/sounds etc., otherwise, we just will be
 //  updating state info, but not firing events
@@ -271,7 +275,19 @@ stub functions for such things as precaching.  So we don't have to modify weapon
  is compiled into both game and client .dlls.
 ======================
 */
-int stub_PrecacheModel(const char* s) { return 0; }
+int stub_PrecacheModel(const char* s)
+{
+	// PS2HLU
+	// Use this stub to load .inf LOD/extra data
+	// for models so that we don't get runtime stutters.
+	int index = 0;
+	model_s* result = gEngfuncs.CL_LoadModel(s, &index);
+
+	if (gl_lod && gl_lod->value != 0 && result != nullptr)
+		(void)CLodManager::getInstance().GetLODData(index, s);
+
+	return 0;
+}
 int stub_PrecacheSound(const char* s) { return 0; }
 unsigned short stub_PrecacheEvent(int type, const char* s) { return 0; }
 const char* stub_NameForFunction(uint32 function) { return "func"; }

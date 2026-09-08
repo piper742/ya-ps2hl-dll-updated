@@ -255,7 +255,7 @@ bool FileSystem_CompareFileTime(const char* filename1, const char* filename2, in
 	return true;
 }
 
-std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileContentFormat format, const char* pathID)
+std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileContentFormat format, const char* pathID, bool silent)
 {
 	assert(nullptr != g_pFileSystem);
 
@@ -283,7 +283,8 @@ std::vector<std::byte> FileSystem_LoadFileIntoBuffer(const char* fileName, FileC
 		return buffer;
 	}
 
-	ALERT(at_console, "FileSystem_LoadFileIntoBuffer: couldn't open file \"%s\" for reading\n", fileName);
+	if (silent == 0)
+		ALERT(at_console, "FileSystem_LoadFileIntoBuffer: couldn't open file \"%s\" for reading\n", fileName);
 	return {};
 }
 
