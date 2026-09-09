@@ -190,6 +190,7 @@ cmd /c ""$(ProjectDir)..\..\filecopy.bat" "$(SolutionDir)../../network" "" "delt
     <ClCompile Include="..\..\dlls\ps2hlu_item_slave_collar.cpp" />
     <ClCompile Include="..\..\dlls\ps2hlu_env_warpball.cpp" />
     <ClCompile Include="..\..\dlls\ps2hlu_useable_graphic.cpp" />
+    <ClCompile Include="..\..\dlls\ps2hlu_button_toggle_indicator.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_bshift.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_dbg.cpp" />
     <ClCompile Include="..\..\dlls\ps2hl_item_eyescanner.cpp" />

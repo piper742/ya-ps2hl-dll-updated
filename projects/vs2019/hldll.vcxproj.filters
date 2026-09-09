@@ -426,6 +426,9 @@
     <ClCompile Include="..\..\dlls\ps2hlu_useable_graphic.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\dlls\ps2hlu_button_toggle_indicator.cpp">
+      <Filter>Source Files\dlls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\dlls\doors.h">
