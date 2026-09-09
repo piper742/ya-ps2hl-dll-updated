@@ -57,15 +57,13 @@ public:
 	int m_iMaxLiveChildren; // max number of monsters that this maker may have out at one time.
 
 	// PS2HLU
-	int	 m_Spawnflags; // Spawned monsters spawnflags
-	string_t m_SpawnTarget; // Monster spawn target
+	int	 m_iSpawnflags = 0; // Spawned monsters spawnflags
+	string_t m_iszSpawnTarget; // Monster spawn target
 
 	float m_flGround; // z coord of the ground under me, used to make sure no monsters are under the maker when it drops a new child
 
 	bool m_fActive;
 	bool m_fFadeChildren; // should we make the children fadeout?
-
-	CBaseEntity *TargetEntity = NULL;
 };
 
 LINK_ENTITY_TO_CLASS(monstermaker, CMonsterMaker);
@@ -79,7 +77,8 @@ TYPEDESCRIPTION CMonsterMaker::m_SaveData[] =
 		DEFINE_FIELD(CMonsterMaker, m_iMaxLiveChildren, FIELD_INTEGER),
 		DEFINE_FIELD(CMonsterMaker, m_fActive, FIELD_BOOLEAN),
 		DEFINE_FIELD(CMonsterMaker, m_fFadeChildren, FIELD_BOOLEAN),
-		DEFINE_FIELD(CMonsterMaker, m_Spawnflags, FIELD_INTEGER),
+		DEFINE_FIELD(CMonsterMaker, m_iSpawnflags, FIELD_INTEGER),
+		DEFINE_FIELD(CMonsterMaker, m_iszSpawnTarget, FIELD_STRING),
 };
 
 
@@ -109,12 +108,12 @@ bool CMonsterMaker::KeyValue(KeyValueData* pkvd)
 	// used on ht10focus and ht04dampen
 	else if (FStrEq(pkvd->szKeyName, "monsterspawnflags"))
 	{
-		m_Spawnflags = atoi(pkvd->szValue);
+		m_iSpawnflags = atoi(pkvd->szValue);
 		return true;
 	}
 	else if (FStrEq(pkvd->szKeyName, "makertarget"))
 	{
-		m_SpawnTarget = ALLOC_STRING(pkvd->szValue);
+		m_iszSpawnTarget = ALLOC_STRING(pkvd->szValue);
 		return true;
 	}
 
@@ -189,31 +188,30 @@ void CMonsterMaker::MakeMonster()
 		return;
 	}
 
+	Vector vecSpawnTarget = pev->origin;
+
+	// PS2HLU
+	// Target entity to spawn monster at. Unlike env_warpball the entitys origin doesn't move
+	// Only used in ht04dampen
+	if (m_iszSpawnTarget)
+	{
+		CBaseEntity* pTargetEntity = UTIL_FindEntityByTargetname(0, STRING(m_iszSpawnTarget));
+		if (pTargetEntity)
+			vecSpawnTarget = pTargetEntity->pev->origin;
+	}
+
 	if (0 == m_flGround)
 	{
 		// set altitude. Now that I'm activated, any breakables, etc should be out from under me.
 		TraceResult tr;
 
-		UTIL_TraceLine(pev->origin, pev->origin - Vector(0, 0, 2048), ignore_monsters, ENT(pev), &tr);
+		UTIL_TraceLine(vecSpawnTarget, vecSpawnTarget - Vector(0, 0, 2048), ignore_monsters, ENT(pev), &tr);
 		m_flGround = tr.vecEndPos.z;
 	}
 
-	// PS2HLU
-	// Target entity to spawn monster at
-	// Only used in ht04dampen
-	if (m_SpawnTarget)
-	{
-		TargetEntity = UTIL_FindEntityByTargetname(0, (char*)STRING(m_SpawnTarget));
-		if (TargetEntity)
-		{
-			UTIL_SetOrigin(pev, TargetEntity->pev->origin);
-			// ALERT(at_console, "DEBUG MonsterMaker SpawnTarget Found!\n");
-		}
-	}
-
-	Vector mins = pev->origin - Vector(34, 34, 0);
-	Vector maxs = pev->origin + Vector(34, 34, 0);
-	maxs.z = pev->origin.z;
+	Vector mins = vecSpawnTarget - Vector(34, 34, 0);
+	Vector maxs = vecSpawnTarget + Vector(34, 34, 0);
+	maxs.z = vecSpawnTarget.z;
 	mins.z = m_flGround;
 
 	CBaseEntity* pList[2];
@@ -240,17 +238,14 @@ void CMonsterMaker::MakeMonster()
 	}
 
 	pevCreate = VARS(pent);
-	pevCreate->origin = pev->origin;
+	pevCreate->origin = vecSpawnTarget;
 	pevCreate->angles = pev->angles;
-	SetBits(pevCreate->spawnflags, SF_MONSTER_FALL_TO_GROUND);
+	// PS2HLU
+	SetBits(pevCreate->spawnflags, (SF_MONSTER_FALL_TO_GROUND | m_iSpawnflags));
 
 	// Children hit monsterclip brushes
 	if ((pev->spawnflags & SF_MONSTERMAKER_MONSTERCLIP) != 0)
 		SetBits(pevCreate->spawnflags, SF_MONSTER_HITMONSTERCLIP);
-
-	// PS2HLU
-	if ( m_Spawnflags )
-		SetBits( pevCreate->spawnflags, m_Spawnflags );
 
 	DispatchSpawn(ENT(pevCreate));
 	pevCreate->owner = edict();
