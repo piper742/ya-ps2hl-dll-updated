@@ -43,13 +43,6 @@ CUseableGraphic* CUseableGraphic::CreateUseableGraphic(CBaseEntity* pTarget, Use
 	pGraphic->pev->classname = MAKE_STRING("useable_graphic");
 	pGraphic->Spawn();
 
-	if (!FStringNull(pTarget->pev->model))
-	{
-		//PRECACHE_MODEL((char*)STRING(pTarget->pev->model));
-		//SET_MODEL(pTarget->edict(), STRING(pTarget->pev->model));
-	}
-
-	// VecBModelOrigin run through abs (?)
 	Vector vecCenter = Vector(abs((pTarget->pev->absmax.x - pTarget->pev->absmin.x) * 0.5f),
 							abs((pTarget->pev->absmax.y - pTarget->pev->absmin.y) * 0.5f),
 							abs((pTarget->pev->absmax.z - pTarget->pev->absmin.z) * 0.5f));
@@ -96,6 +89,11 @@ CUseableGraphic* CUseableGraphic::CreateUseableGraphic(CBaseEntity* pTarget, Use
 
 		vecShiftedOrigin.z += 15.0f;
 	}
+
+	// PS2HLU
+	// Maintain correct tankcontrols size
+	if (FClassnameIs(pTarget->pev, "func_tankcontrols"))
+		pGraphic->pev->scale *= 0.25f;
 
 	// PS2HLU
 	pGraphic->pev->scale = pGraphic->pev->scale * 0.05f;

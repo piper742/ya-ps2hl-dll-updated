@@ -5254,7 +5254,7 @@ void CBasePlayer::CheckUseableObjects()
 			// Seems fine so far... good enough
 			if ((pObject->ObjectCaps() & (FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE)) != 0 &&
 					FClassnameIs(pObject->pev, "func_pushable") == 0 &&
-					(pObject->pev->spawnflags & 0x200) == 0 && pObject->IsAlive() == 0)
+					(pObject->pev->spawnflags & 0x200) == 0 && pObject->IsAlive() == 0 && (pObject->pev->flags & (FL_MONSTER | FL_CLIENT)) == 0)
 			{
 				// !!!PERFORMANCE- should this check be done on a per case basis AFTER we've determined that
 				// this object is actually usable? This dot is being done for every object within PLAYER_SEARCH_RADIUS
