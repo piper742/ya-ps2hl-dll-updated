@@ -29,6 +29,12 @@
 
 
 #define NUM_SCIENTIST_HEADS 4 // four heads available for scientist model
+
+// PS2HLU
+#define GROUP_BODY 0
+#define GROUP_HEAD 1
+#define GROUP_NEEDLE 2
+
 enum
 {
 	HEAD_GLASSES = 0,
@@ -625,14 +631,12 @@ void CScientist::HandleAnimEvent(MonsterEvent_t* pEvent)
 		break;
 	case SCIENTIST_AE_NEEDLEON:
 	{
-		int oldBody = pev->body;
-		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 1;
+		SetBodygroup(GROUP_NEEDLE, 1);
 	}
 	break;
 	case SCIENTIST_AE_NEEDLEOFF:
 	{
-		int oldBody = pev->body;
-		pev->body = (oldBody % NUM_SCIENTIST_HEADS) + NUM_SCIENTIST_HEADS * 0;
+		SetBodygroup(GROUP_NEEDLE, 0);
 	}
 	break;
 
@@ -646,11 +650,6 @@ void CScientist::HandleAnimEvent(MonsterEvent_t* pEvent)
 //=========================================================
 void CScientist::Spawn()
 {
-	if (pev->body == -1)
-	{														 // -1 chooses a random head
-		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1); // pick a head, any head
-	}
-
 	Precache();
 
 	if (FClassnameIs(pev, "monster_wheelchair"))
@@ -674,8 +673,24 @@ void CScientist::Spawn()
 	// White hands
 	pev->skin = 0;
 
+	// PS2HLU
+	// we need an initialized modelindex, so we do this later!
+	if (pev->body == -1)
+	{
+		// -1 chooses a random head
+		SetBodygroup(GROUP_HEAD, RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1)); // pick a head, any head
+	}
+	else
+	{
+		SetBodygroup(GROUP_HEAD, pev->body);
+	}
+
+	// PS2HLU
+	// Why is this getting changed? It doesn't make any sense, setbodygroup should reset it
+	SetBodygroup(GROUP_BODY, 0);
+
 	// Luther is black, make his hands black
-	if (pev->body == HEAD_LUTHER)
+	if (GetBodygroup(GROUP_HEAD) == HEAD_LUTHER)
 		pev->skin = 1;
 
 	MonsterInit();
@@ -780,7 +795,7 @@ void CScientist::TalkInit()
 	}
 
 	// get voice for head
-	switch (pev->body % NUM_SCIENTIST_HEADS)
+	switch (GetBodygroup(GROUP_HEAD) % NUM_SCIENTIST_HEADS)
 	{
 	default:
 	case HEAD_GLASSES:
@@ -1262,10 +1277,19 @@ void CDeadScientist::Spawn()
 
 	if (pev->body == -1)
 	{														 // -1 chooses a random head
-		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1); // pick a head, any head
+		SetBodygroup(GROUP_HEAD, RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1)); // pick a head, any head
 	}
+	else
+	{
+		SetBodygroup(GROUP_HEAD, pev->body);
+	}
+
+	// PS2HLU
+	// Why is this getting changed? It doesn't make any sense, setbodygroup should reset it
+	SetBodygroup(GROUP_BODY, 0);
+
 	// Luther is black, make his hands black
-	if (pev->body == HEAD_LUTHER)
+	if (GetBodygroup(GROUP_HEAD) == HEAD_LUTHER)
 		pev->skin = 1;
 	else
 		pev->skin = 0;
@@ -1353,10 +1377,19 @@ void CSittingScientist::Spawn()
 
 	if (pev->body == -1)
 	{														 // -1 chooses a random head
-		pev->body = RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1); // pick a head, any head
+		SetBodygroup(GROUP_HEAD, RANDOM_LONG(0, NUM_SCIENTIST_HEADS - 1)); // pick a head, any head
 	}
+	else
+	{
+		SetBodygroup(GROUP_HEAD, pev->body);
+	}
+
+	// PS2HLU
+	// Why is this getting changed? It doesn't make any sense, setbodygroup should reset it
+	SetBodygroup(GROUP_BODY, 0);
+
 	// Luther is black, make his hands black
-	if (pev->body == HEAD_LUTHER)
+	if (GetBodygroup(GROUP_HEAD) == HEAD_LUTHER)
 		pev->skin = 1;
 
 	m_baseSequence = LookupSequence("sitlookleft");
