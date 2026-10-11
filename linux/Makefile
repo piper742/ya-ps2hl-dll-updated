@@ -36,7 +36,7 @@ ARCH_CFLAGS=-march=pentium-m -mfpmath=387 -mno-sse
 ifeq "$(CFG)" "release"
 	ARCH_CFLAGS+=-O3 
 else
-	ARCH_CFLAGS+=-gdwarf-2 -g2 
+	ARCH_CFLAGS+=-gdwarf-2 -g2 -O0
 endif
 
 BASE_CFLAGS=-std=c++17 -fno-strict-aliasing -fno-exceptions -fexpensive-optimizations -pedantic-errors -Werror=return-type -w
@@ -56,7 +56,7 @@ SHLIBCFLAGS=
 ifeq "$(CFG)" "release"
 	SHLIBLDFLAGS="-shared -Wl,-Map,$@_map.txt -Wl,--no-undefined"
 else
-	SHLIBLDFLAGS="-shared -gdwarf-2 -g2 -Wl,-Map,$@_map.txt -Wl,--no-undefined"
+	SHLIBLDFLAGS="-shared -gdwarf-2 -O0 -g2 -Wl,-Map,$@_map.txt -Wl,--no-undefined"
 endif
 
 AR=ar
