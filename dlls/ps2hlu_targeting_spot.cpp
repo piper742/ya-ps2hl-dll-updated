@@ -68,7 +68,7 @@ void CTargetingSpot::ScaleThink(void)
 			pev->scale = 0.9f;
 	}
 	else
-		pev->origin = g_vecZero; // What's the purpose of this?
+		SetThink(NULL);
 }
 
 void CTargetingSpot::SetTarget(CBaseEntity* pTarget)
