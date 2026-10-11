@@ -3211,7 +3211,7 @@ void CBasePlayer::Spawn()
 	// Set bodygroup and skins
 	if (this->m_decayIndex == 1)
 	{
-		SetBodygroup(1, 4);
+		SetBodygroup(1, 1);
 		pev->skin = 1;
 	}
 	else if (this->m_decayIndex == 2)
