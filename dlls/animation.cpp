@@ -485,7 +485,7 @@ void SetBodygroup(void* pmodel, entvars_t* pev, int iGroup, int iValue)
 {
 	int fixedValue = iValue;
 
-	ALERT(at_console, "Setbodygroup called for %s with modelindex of: %i\n", STRING(pev->model), pev->modelindex);
+	//ALERT(at_console, "Setbodygroup called for %s with modelindex of: %i\n", STRING(pev->model), pev->modelindex);
 
 	// PS2HLU
 	// I've not yet located where this code actually is, but pev->body does actually get reset to zero if it's -1
@@ -497,11 +497,21 @@ void SetBodygroup(void* pmodel, entvars_t* pev, int iGroup, int iValue)
 		if (iValue > rs->MaxBodyParts)
 			return;
 
-		if (iGroup <= rs->NumBodyGroups && rs->groups[iGroup].table.empty() == 0)
+		fixedValue = 0;
+		if (rs->MaxBodyParts != 0 && iValue != 0)
 		{
-			fixedValue *= rs->groups[iGroup].table[0].LodCount + 1;
-			ALERT(at_console, "Setting: %s to: part %i, submodel %i -> %i\n", STRING(pev->model), iGroup, iValue, fixedValue);
+			for (int i = 0; i < rs->MaxBodyParts; i++)
+			{
+				// End of loop check
+				if (i == iValue || i >= rs->MaxBodyParts)
+					break;
+
+				//ALERT(at_console, "bodygroups: Accessing at index: %i, group %i, part %i\n", (iGroup * rs->MaxBodyParts + i), iGroup, i);
+				fixedValue += rs->table[(iGroup * rs->MaxBodyParts + i)].LodCount + 1;
+			}
 		}
+
+		//ALERT(at_console, "Setting: %s to: part %i, submodel %i -> %i\n", STRING(pev->model), iGroup, iValue, fixedValue);
 	}
 
 	SetBodygroup_real(pmodel, pev, iGroup, fixedValue);
@@ -533,9 +543,16 @@ int GetBodygroup(void* pmodel, entvars_t* pev, int iGroup)
 {
 	int res = GetBodygroup_real(pmodel, pev, iGroup);
 
+	// TODO: Match client-side implementation!!! It currently works good enough to be left as is,
+	// but breakage is expected for some models
 	if (auto rs = CLodManager::getInstance().GetLODData(pev->modelindex, STRING(pev->model)); rs != nullptr)
 	{
-		res /= (rs->groups[iGroup].table[0].LodCount + 1);
+		//if (rs->groups.size() <= iGroup || rs->groups[iGroup].table.empty())
+		//	return res;
+		if (res > rs->table.size())
+			return 0;
+
+		res /= rs->table[(iGroup * rs->MaxBodyParts)].LodCount + 1;
 	}
 
 	return res;

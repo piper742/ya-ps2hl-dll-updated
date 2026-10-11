@@ -7,6 +7,9 @@
 // Used only for Con_DPrintf
 #ifdef CLIENT_DLL
 #include "hud.h"
+#else
+#include "extdll.h"
+#include "util.h"
 #endif
 
 // TEMP
@@ -75,12 +78,10 @@ bool CLodManager::LoadLODData(const char* filename, LodData_s& result)
 	int numParsed = 0; // only tracks groups and maxparts!
 	int numGroups = 0;
 	int numParts = 0;
+	int numHandledParts = 0;
 	int fades[2]{0};
 	bool bInsideGroup = false;
 	const char* pattern = "1234567890";
-
-	// Used for emplacing to LodData_s
-	LodBodyGroup_s tmpGroup{};
 
 	for (int j = 0; j < 2; j++)
 	{
@@ -96,48 +97,51 @@ bool CLodManager::LoadLODData(const char* filename, LodData_s& result)
 					line[0] == '/' && line[1] == '/')
 				continue;
 
-			// Most important values to parse!
-			if (line.compare(0, strlen("groups["), "groups[") == 0)
-			{
-				if (int end = line.find("]", strlen("groups[")); end != std::string::npos)
+				// Most important values to parse!
+				if (line.compare(0, strlen("groups["), "groups[") == 0)
 				{
-					std::from_chars(line.data() + strlen("groups["), line.data() + end, numGroups);
+					if (int end = line.find("]", strlen("groups[")); end != std::string::npos)
+					{
+						std::from_chars(line.data() + strlen("groups["), line.data() + end, numGroups);
 
-					numParsed++;
+						numParsed++;
+					}
+					continue;
 				}
-				continue;
-			}
 
-			if (line.compare(0, strlen("maxparts["), "maxparts[") == 0)
-			{
-				if (int end = line.find("]", strlen("maxparts[")); end != std::string::npos)
+				if (line.compare(0, strlen("maxparts["), "maxparts[") == 0)
 				{
-					std::from_chars(line.data() + strlen("maxparts["), line.data() + end, numParts);
-					// Reserve so we don't unnecessarily fragment
-					//tmpGroup.table.reserve(numParts);
-					numParsed++;
-				}
-				continue;
-			}
+					if (int end = line.find("]", strlen("maxparts[")); end != std::string::npos)
+					{
+						std::from_chars(line.data() + strlen("maxparts["), line.data() + end, numParts);
+						numParsed++;
+					}
 
-			// These ones are completely optional, only item pickups seem to utilize them
-			if (line.compare(0, strlen("fadestart["), "fadestart[") == 0)
-			{
-				if (int end = line.find("]", strlen("fadestart[")); end != std::string::npos)
-				{
-					std::from_chars(line.data() + strlen("fadestart["), line.data() + end, fades[0]);
-				}
-				continue;
-			}
+					// Ideally this only runs once
+					//if (numParsed == 2 && numGroups != 0 && numParts != 0)
+					//		result.table.reserve(numGroups * numParts);
 
-			if (line.compare(0, strlen("fadeend["), "fadeend[") == 0)
-			{
-				if (int end = line.find("]", strlen("fadeend[")); end != std::string::npos)
-				{
-					std::from_chars(line.data() + strlen("fadeend["), line.data() + end, fades[1]);
+					continue;
 				}
-				continue;
-			}
+
+				// These ones are completely optional, only item pickups seem to utilize them
+				if (line.compare(0, strlen("fadestart["), "fadestart[") == 0)
+				{
+					if (int end = line.find("]", strlen("fadestart[")); end != std::string::npos)
+					{
+						std::from_chars(line.data() + strlen("fadestart["), line.data() + end, fades[0]);
+					}
+					continue;
+				}
+
+				if (line.compare(0, strlen("fadeend["), "fadeend[") == 0)
+				{
+					if (int end = line.find("]", strlen("fadeend[")); end != std::string::npos)
+					{
+						std::from_chars(line.data() + strlen("fadeend["), line.data() + end, fades[1]);
+					}
+					continue;
+				}
 
 			// Only parse these if we've already finished our first pass
 			if (numParsed >= 2)
@@ -147,27 +151,41 @@ bool CLodManager::LoadLODData(const char* filename, LodData_s& result)
 				if (line[0] == '{' && line[1] != '}')
 				{
 					bInsideGroup = true;
+					numHandledParts = numParts;
 					continue;
 				}
 
 				if (line[0] == '}')
 				{
 					bInsideGroup = false;
-					result.groups.push_back(tmpGroup);
-					tmpGroup.table.clear();
+					if (numHandledParts > 0)
+					{
+						LodEntry_s empty{};
+						for (; numHandledParts >= 0; numHandledParts--)
+						{
+							result.table.push_back(empty);
+						}
+					}
+
 					continue;
 				}
 
 				if (bInsideGroup)
 				{
+					LodEntry_s entry{};
+					entry.LodCount = 0;
 					// Skip empty lines
-					if (line == "blank")
+					if (line[0] == 'b' && line[1] == 'l' && line[2] == 'a' && line[3] == 'n' && line[4] == 'k')
+					{
+						numHandledParts--;
+						result.table.push_back(entry);
 						continue;
+					}
 
 					if (line.compare(0, strlen("part["), "part[") == 0)
 					{
+						numHandledParts--;
 						// Fill LodEntry
-						LodEntry_s entry;
 						int dist = 0;
 						int idx = 0;
 						// We add one in the loop
@@ -188,7 +206,7 @@ bool CLodManager::LoadLODData(const char* filename, LodData_s& result)
 							lastpos = end + 1;
 						}
 						entry.LodCount = idx + 1;
-						tmpGroup.table.push_back(entry);
+						result.table.push_back(entry);
 					}
 				}
 			}
@@ -204,11 +222,24 @@ bool CLodManager::LoadLODData(const char* filename, LodData_s& result)
 		result.FadeStart = fades[0];
 		result.FadeEnd = fades[1];
 
+// DEBUG DEBUG DEBUG
+#if 0
+#ifndef CLIENT_DLL
+		ALERT(at_console, "Parsed %s with %i entries! Expected: %i\n", filename, result.table.size(), (result.MaxBodyParts * result.NumBodyGroups));
+		ALERT(at_console, "parts: %i, numbodygroups: %i\n", result.MaxBodyParts, result.NumBodyGroups);
+
+		for (int j = 0; j < (result.NumBodyGroups * result.MaxBodyParts); j++)
+		{
+			ALERT(at_console, "LODDIST at %i: %lu\n", j, result.table[j].LodCount );
+		}
+#endif
+#endif
+
 		// Doing this might be a bad thing since we're forcing a
 		// reallocation, but really I'll just leave this be
 		// I shouldn't be worrying about this (class) too much as long as it
 		// doesn't tank performance, hog or corrupt memory it's fine...
-		result.groups.resize(numGroups);
+		//result.groups.resize(numGroups);
 		return true;
 	}
 

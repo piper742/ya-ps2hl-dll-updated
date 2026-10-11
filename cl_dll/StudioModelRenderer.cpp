@@ -1669,8 +1669,12 @@ void CStudioModelRenderer::StudioRenderFinal_Software()
 		for (i = 0; i < m_pStudioHeader->numbodyparts; i++)
 		{
 			// PS2HLU
+			//
+			// Temporarily disabled as no testing has been done, this is still the old inaccurate code!
+			//
 			// Handle LOD data
 			// TODO: TEST SOFTWARE MODE!!!
+#if 0
 			if (gl_lod && gl_lod->value != 0)
 			{
 				if (const auto* pLOD = CLodManager::getInstance().GetLODData(m_pCurrentEntity->curstate.modelindex, m_pCurrentEntity->model->name); pLOD != nullptr)
@@ -1717,6 +1721,7 @@ void CStudioModelRenderer::StudioRenderFinal_Software()
 					}
 				}
 			}
+#endif
 
 			IEngineStudio.StudioSetupModel(i, (void**)&m_pBodyPart, (void**)&m_pSubModel);
 			IEngineStudio.StudioDrawPoints();
@@ -1770,11 +1775,27 @@ void CStudioModelRenderer::StudioRenderFinal_Hardware()
 			{
 				if (const auto* pLOD = CLodManager::getInstance().GetLODData(m_pCurrentEntity->curstate.modelindex, m_pCurrentEntity->model->name); pLOD != nullptr)
 				{
-					// Due to the way I chose to represent the data (vectors) MaxBodyParts
-					// cannot be trusted for safe access, but keep it around in case someone
-					// is using the mod for testing their .inf files
-					if ((i >= pLOD->groups.size() || i > pLOD->MaxBodyParts) == 0)
+					// PS2HLU
+					// gl_lod behaves as a LOD multiplier
+					const int lodDist = gl_lod->value;
+
+					if ((i > pLOD->MaxBodyParts) == 0 && (pLOD->table.empty() == 0 ) && (i * pLOD->MaxBodyParts - 1) <= (pLOD->MaxBodyParts * pLOD->NumBodyGroups))
 					{
+						Vector vecDist;
+						VectorSubtract(m_pCurrentEntity->origin, v_origin, vecDist);
+						float defaultFOV = 90.0f;
+						// PS2HLU
+						// 1.7 multiplier is hardcoded
+						// TODO: Consider hooking up gl_lod_zoom (it doesnt do anything on PS2)
+						float curFOV = gHUD.m_iFOV * 1.7f;
+
+						// Calculate distance from currently drawn entity, accounting for FOV based zoom
+						float flLength = vecDist.Length();
+						if (curFOV > defaultFOV || curFOV == 0.0f)
+							curFOV = defaultFOV;
+
+						flLength *= curFOV / defaultFOV;
+
 						// PS2HLU
 						// We need to grab it like this, since IEngineStudio.StudioSetupModel returns something with a garbage ->base variable.
 						// Still, the engine is fine with that one, but sadly it ruins my bodygroup calculations
@@ -1784,31 +1805,75 @@ void CStudioModelRenderer::StudioRenderFinal_Hardware()
 						//gEngfuncs.Con_Printf("model: %s, body: %i, i: %i\n", m_pCurrentEntity->model->name, m_pCurrentEntity->curstate.body, i);
 
 						// Grabbed from animation.cpp
-						const int iGroup = (m_pCurrentEntity->curstate.body / body->base) % body->nummodels;
-						// Bodygroup without LOD data
-						const int realGroup = iGroup / (pLOD->groups[i].table[0].LodCount + 1);
+						const int iGroupValue = (m_pCurrentEntity->curstate.body / body->base) % body->nummodels;
 
-						if (realGroup < pLOD->groups[i].table.size())
+						// Get LOD-less body group value
+						int iRealValue = iGroupValue;
+						for (int j2 = 0; j2 < pLOD->NumBodyGroups; j2++)
 						{
-							// TODO: Is this the order in which it gets checked on PS2?
-							// I'm using this order since it would make sense in large open spaces with lots of
-							// distant models, but then again the main Half-Life campaign is mostly corridors where
-							// you're usually pretty close to the enemies.
-							for (int j = pLOD->groups[i].table.at(realGroup).LodCount - 1; j >= 0; j--)
-							{
-								Vector vecDist;
+							if (j2 > iGroupValue)
+								break;
 
-								VectorSubtract(m_pCurrentEntity->origin, v_origin, vecDist);
-								if (Length(vecDist) >= pLOD->groups[i].table[realGroup].dist[j])
+							iRealValue -= pLOD->table[V_max(0, (i * pLOD->MaxBodyParts - 1) + j2)].LodCount + 1;
+
+							// fail safe
+							if (iRealValue < 0)
+							{
+								iRealValue = 0;
+								break;
+							}
+						}
+
+						// Calculate which entry we should use
+						int finalIdx = i * pLOD->NumBodyGroups + iRealValue;
+
+						// Skip a single element if we landed on an empty spot
+						if (finalIdx != (pLOD->MaxBodyParts * pLOD->NumBodyGroups - 1))
+							if (pLOD->table[finalIdx].LodCount == 0 && pLOD->table[finalIdx + 1].LodCount != 0)
+								finalIdx++;
+
+						// Old table walking code, reuse as base if it turns out we're getting the wrong LOD entries,
+						// but currently it's fine since we are getting ANY kind of entry at the expected indexes
+						// so TODO: Verify if behaviour matches PS2 version/retail
+						/*
+						for (int skips = 0, idx = 0, target = (i * pLOD->NumBodyGroups + iRealValue);
+								idx < (pLOD->MaxBodyParts * pLOD->NumBodyGroups); idx++)
+						{
+							// Jump over single empty spaces
+							if (idx == target)
+							{
+								if (pLOD->table[idx].LodCount == 0 && pLOD->table[idx + 1].LodCount != 0)
 								{
-									m_pCurrentEntity->curstate.body = m_pCurrentEntity->curstate.body - (iGroup * body->base) + ((iGroup + j + 1) * body->base);
-									break;
+									//col++;
+									skips++;
+									continue;
 								}
 							}
-								//gEngfuncs.Con_DPrintf("base: %i, nummodels: %i\n", body->base, body->nummodels);
-								//gEngfuncs.Con_Printf("model: %s, body: %i, i: %i, curGroup: %i\n", m_pCurrentEntity->model->name, m_pCurrentEntity->curstate.body, i, curGroup);
-							//gEngfuncs.Con_Printf("iGroup: %i, iGroup2: %i\n", iGroup, iGroup2);
+
+							finalIdx = idx;
+							if (idx == (target + skips) )
+								break;
 						}
+						*/
+
+						// DEBUG
+						//if (strcmp(m_pCurrentEntity->model->name, "models/barney.mdl") == 0)
+						//	gEngfuncs.Con_Printf("barney.mdl: LOD %i (bodypart: %i, group: %i), target %i\n", finalIdx, i, iRealValue, (i * pLOD->MaxBodyParts + iRealValue));
+
+						int finalPart = 0;
+						for (int part = 0; part < 4; part++)
+						{
+							// PS2HLU
+							// gl_lod behaves as an LOD distance multiplier, a neat hack
+							// for high resolutions (>480p) where the pop-in is more obvious
+							if ((pLOD->table[finalIdx].dist[part] * lodDist) > flLength || /*finalPart == 3 ||*/ pLOD->table[finalIdx].LodCount <= part)
+								break;
+
+							finalPart = part + 1;
+						}
+
+						//m_pCurrentEntity->curstate.body = m_pCurrentEntity->curstate.body - (iRealValue * body->base) + ((iRealValue + finalPart) * body->base);
+						m_pCurrentEntity->curstate.body = m_pCurrentEntity->curstate.body - (iGroupValue * body->base) + ((iGroupValue + finalPart) * body->base);
 					}
 				}
 			}

@@ -13,11 +13,7 @@ struct LodEntry_s {
 
 	unsigned long dist[4];
 
-	LodEntry_s() : LodCount(0) {};
-};
-
-struct LodBodyGroup_s {
-	std::vector<LodEntry_s> table;
+	LodEntry_s() : LodCount(0), dist{0} {};
 };
 
 struct LodData_s {
@@ -33,9 +29,18 @@ struct LodData_s {
 	unsigned long FadeStart;
 	unsigned long FadeEnd;
 
-	std::vector<LodBodyGroup_s> groups;
+	std::vector<LodEntry_s> table;
 
-	LodData_s() : MaxBodyParts(0), NumBodyGroups(0), FadeStart(0), FadeEnd(0), groups(0) {};
+	// Gets the CORRECT LOD data, the one that's used on the
+	// server. The client indexes the array wrong (switched rows and columns)
+	LodEntry_s& at(size_t row, size_t col) {
+		return table[ row * NumBodyGroups + col ];
+	}
+	const LodEntry_s& at(size_t row, size_t col) const {
+		return table[ row * NumBodyGroups + col ];
+	};
+
+	LodData_s() : MaxBodyParts(0), NumBodyGroups(0), FadeStart(0), FadeEnd(0), table(0) {};
 };
 
 class CLodManager
