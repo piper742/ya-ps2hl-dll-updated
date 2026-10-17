@@ -105,6 +105,9 @@ enum
 	SCHED_GRUNT_WAIT_FACE_ENEMY,
 	SCHED_GRUNT_TAKECOVER_FAILED, // special schedule type that forces analysis of conditions and picks the best possible schedule to recover from this type of failure.
 	SCHED_GRUNT_ELOF_FAIL,
+	SCHED_GRUNT_RELOAD, // PS2HLU
+	SCHED_GRUNT_RUN_AWAY_FROM_BEST_SOUND,
+	SCHED_GRUNT_THROWBACK_GRENADE,
 };
 
 //=========================================================
@@ -115,7 +118,10 @@ enum
 	TASK_GRUNT_FACE_TOSS_DIR = LAST_COMMON_TASK + 1,
 	TASK_GRUNT_SPEAK_SENTENCE,
 	TASK_GRUNT_CHECK_FIRE,
-	SCHED_GRUNT_THROWBACK_GRENADE,
+	// PS2HLU
+	TASK_GRUNT_RUNAWAY_FROM_BEST_SOUND,
+	TASK_GRUNT_FIND_GRENADE,
+	TASK_GRUNT_THROWBACK_GRENADE,
 };
 
 //=========================================================
@@ -190,7 +196,8 @@ public:
 	static const char* pGruntSentences[];
 
 	// PS2HLU
-	bool bIsHoldingGrenade = false;
+	EHANDLE m_hHeldGrenade;
+	float m_fAggressionCooldown = 0.0f;
 };
 
 LINK_ENTITY_TO_CLASS(monster_human_grunt, CHGrunt);
@@ -209,6 +216,9 @@ TYPEDESCRIPTION CHGrunt::m_SaveData[] =
 		//  DEFINE_FIELD( CShotgun, m_iBrassShell, FIELD_INTEGER ),
 		//  DEFINE_FIELD( CShotgun, m_iShotgunShell, FIELD_INTEGER ),
 		DEFINE_FIELD(CHGrunt, m_iSentence, FIELD_INTEGER),
+		// PS2HLU
+		DEFINE_FIELD(CHGrunt, m_hHeldGrenade, FIELD_EHANDLE),
+		DEFINE_FIELD(CHGrunt, m_fAggressionCooldown, FIELD_TIME),
 };
 
 IMPLEMENT_SAVERESTORE(CHGrunt, CSquadMonster);
@@ -466,6 +476,8 @@ bool CHGrunt::CheckRangeAttack1(float flDot, float flDist)
 
 		// PS2HLU
 		// TODO: Look into this more
+		// Seems like more func_wall_toggle SF 4 logic, but it seems to extend
+		// to func_wall too? ughhh this needs a thorough investigation
 		//if (RANDOM_LONG(0,4) != 0)
 
 		if (tr.flFraction == 1.0)
@@ -896,13 +908,18 @@ void CHGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 		UTIL_MakeVectors(pev->angles);
 
 		// PS2HLU
-		if (bIsHoldingGrenade)
+		// There's waaaaay more logic here including a call to
+		// a function that seems to be a member of CGrenade?
+		// For now it's good enough
+		// TODO: Make implementation more accurate!
+		if (m_hHeldGrenade)
 		{
 			// show grenade
-			m_hEnemy->pev->movetype = MOVETYPE_BOUNCE;
-			m_hEnemy->pev->effects &= ~EF_NODRAW;
-			m_hEnemy->pev->velocity = (g_vecZero + gpGlobals->v_forward * 700 + gpGlobals->v_up * 30); // VecCheckToss(pev, GetGunPosition(), (gpGlobals->v_forward * 100), 0.5);
-			bIsHoldingGrenade = false;
+			m_hHeldGrenade->pev->movetype = MOVETYPE_BOUNCE;
+			m_hHeldGrenade->pev->effects &= ~EF_NODRAW;
+			m_hHeldGrenade->pev->velocity = (g_vecZero + gpGlobals->v_forward * 700 + gpGlobals->v_up * 30); // VecCheckToss(pev, GetGunPosition(), (gpGlobals->v_forward * 100), 0.5);
+			
+			m_hHeldGrenade = NULL;
 		}
 		else
 		{
@@ -995,14 +1012,13 @@ void CHGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 	// PS2HLU
 	case HGRUNT_AE_PICKUP_GREN:
 	{
-		if (FClassnameIs(m_hEnemy->pev, "grenade"))
+		if (m_hHeldGrenade)
 		{
 			UTIL_MakeVectors(pev->angles);
-			m_hEnemy->pev->owner = edict();
-			m_hEnemy->pev->effects |= EF_NODRAW;
-			m_hEnemy->pev->movetype = MOVETYPE_NOCLIP;
-			UTIL_SetOrigin(m_hEnemy->pev, (GetGunPosition() + gpGlobals->v_forward * 16));
-			bIsHoldingGrenade = true;
+			m_hHeldGrenade->pev->owner = edict();
+			m_hHeldGrenade->pev->effects |= EF_NODRAW;
+			m_hHeldGrenade->pev->movetype = MOVETYPE_NOCLIP;
+			UTIL_SetOrigin(m_hHeldGrenade->pev, (GetGunPosition() + gpGlobals->v_forward * 16));
 		}
 		else
 			ALERT(at_aiconsole, "hgrunt couldnt find grenade!!!\n");
@@ -1011,12 +1027,12 @@ void CHGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 
 	case HGRUNT_AE_KICK_GREN:
 	{
-		if (FClassnameIs(m_hEnemy->pev, "grenade"))
+		if (m_hHeldGrenade)
 		{
-			m_hEnemy->pev->owner = edict();
+			m_hHeldGrenade->pev->owner = edict();
 			UTIL_MakeVectors(pev->angles);
-			m_hEnemy->pev->velocity = m_hEnemy->pev->velocity + gpGlobals->v_forward * 1000 + gpGlobals->v_up * 50;
-			m_hEnemy = NULL;
+			m_hHeldGrenade->pev->velocity = m_hHeldGrenade->pev->velocity + gpGlobals->v_forward * 500.0f + Vector(0, 0, 150);
+			m_hHeldGrenade = NULL;
 		}
 	}
 	break;
@@ -1033,6 +1049,11 @@ void CHGrunt::HandleAnimEvent(MonsterEvent_t* pEvent)
 void CHGrunt::Spawn()
 {
 	Precache();
+
+	// PS2HLU
+	// Scrapped model swap branch, notify the mapper if it's been checked
+	if (pev->spawnflags & 0x1000)
+		ALERT(at_aiconsole, "DEBUG: monster_human_grunt has model change spawnflag (0x1000) checked!\n");
 
 	SET_MODEL(ENT(pev), "models/hgrunt.mdl");
 	UTIL_SetSize(pev, VEC_HUMAN_HULL_MIN, VEC_HUMAN_HULL_MAX);
@@ -1099,6 +1120,10 @@ void CHGrunt::Spawn()
 //=========================================================
 void CHGrunt::Precache()
 {
+	// PS2HLU
+	// There's a spawnflag that causes a branch here, implying
+	// it was meant for a model replacement, but the else branch
+	// is models/hgrunt.dol too so it's pointless
 	PRECACHE_MODEL("models/hgrunt.mdl");
 
 	PRECACHE_SOUND("hgrunt/gr_mgun1.wav");
@@ -1177,6 +1202,118 @@ void CHGrunt::StartTask(Task_t* pTask)
 		}
 		break;
 
+	// PS2HLU
+	case TASK_GRUNT_RUNAWAY_FROM_BEST_SOUND:
+		CSound* pSound;
+		pSound = PBestSound();
+
+		if (pSound)
+		{
+			Vector dist = pev->origin - pSound->m_vecOrigin;
+			float flDist = dist.Length();
+
+			if (flDist == 0.0f)
+			{
+				dist.x = 0.0f;
+				dist.y = 0.0f;
+				dist.z = 1.0f;
+			}
+			else
+			{
+				dist.x /= flDist;
+				dist.y /= flDist;
+				dist.z /= flDist;
+			}
+
+			Vector vecBody = pev->origin + Vector(0, 0, 18);
+			Vector vecSearchRadius = dist * 256.0f;
+
+			TraceResult tr;
+			UTIL_TraceLine(vecBody, vecBody + vecSearchRadius, dont_ignore_monsters, ENT(pev), &tr);
+
+			if (tr.flFraction == 1.0f)
+			{
+				const Vector vecDest = pev->origin + vecSearchRadius;
+				MoveToLocation(ACT_RUN, 2, vecDest);
+			}
+			else
+			{
+				Vector vecAng = UTIL_VecToAngles(vecBody + vecSearchRadius);
+				UTIL_MakeVectors(vecAng);
+				Vector vecSearchRadius2 = gpGlobals->v_right * 192.0f;
+				UTIL_TraceLine(vecBody, vecBody + vecSearchRadius2, dont_ignore_monsters, ENT(pev), &tr);
+
+				if (tr.flFraction == 1.0f)
+				{
+					const Vector vecDest = pev->origin + gpGlobals->v_right * 256.0f;
+					MoveToLocation(ACT_RUN, 2, vecDest);
+				}
+				else
+				{
+					Vector vecSearchRadius3 = gpGlobals->v_right * -192.0f;
+					UTIL_TraceLine(vecBody, vecBody + vecSearchRadius3, dont_ignore_monsters, ENT(pev), &tr);
+
+					if (tr.flFraction == 1.0f)
+					{
+						const Vector vecDest = pev->origin + gpGlobals->v_right * -256.0f;
+						MoveToLocation(ACT_RUN, 2, vecDest);
+					}
+					else
+					{
+						TaskFail();
+						break;
+					}
+				}
+			}
+
+			// finish
+			TaskComplete();
+		}
+		else
+			TaskFail();
+
+		break;
+	case TASK_GRUNT_FIND_GRENADE:
+		CBaseEntity* pEntity;
+		pEntity = nullptr;
+		bool success;
+		success = false;
+
+		while (pEntity = UTIL_FindEntityByClassname(pEntity, "grenade"))
+		{
+			const float flDist = (pEntity->pev->origin - pev->origin).Length();
+
+			if (flDist <= 192.0f)
+			{
+				if (flDist < 48.0f || MoveToLocation(ACT_RUN, 2, pEntity->pev->origin))
+				{
+					// something happens here???
+					m_hHeldGrenade = pEntity;
+					pev->dmgtime = pEntity->pev->dmgtime;
+					success = true;
+					break;
+				}
+			}
+		}
+
+		if (success)
+			TaskComplete();
+		else
+			TaskFail();
+
+		break;
+	case TASK_GRUNT_THROWBACK_GRENADE:
+		if (m_hHeldGrenade)
+		{
+			if ((m_hHeldGrenade->pev->origin - pev->origin).Length() < 48.0f)
+			{
+				m_IdealActivity = ACT_SPECIAL_ATTACK2;
+			}
+		}
+		else
+			TaskFail();
+
+		break;
 	default:
 		CSquadMonster::StartTask(pTask);
 		break;
@@ -1200,6 +1337,16 @@ void CHGrunt::RunTask(Task_t* pTask)
 		{
 			m_iTaskStatus = TASKSTATUS_COMPLETE;
 		}
+		break;
+	}
+	// PS2HLU
+	case TASK_GRUNT_THROWBACK_GRENADE:
+	{
+		if (m_fSequenceFinished && HasConditions(bits_COND_TASK_FAILED) == 0)
+		{
+			m_iTaskStatus = TASKSTATUS_COMPLETE;
+		}
+
 		break;
 	}
 	default:
@@ -1617,6 +1764,29 @@ Schedule_t slGruntTakeCoverFromBestSound[] =
 			"GruntTakeCoverFromBestSound"},
 };
 
+// PS2HLU
+// Run away from best sound, but don't consider ourselves in cover
+
+Task_t tlGruntRunAwayFromBestSound[] =
+	{
+		{TASK_SET_FAIL_SCHEDULE, (float)SCHED_GRUNT_THROWBACK_GRENADE},
+		{TASK_STOP_MOVING, (float)0},
+		{TASK_GRUNT_RUNAWAY_FROM_BEST_SOUND, (float)0},
+		{TASK_RUN_PATH, (float)0},
+		{TASK_WAIT_FOR_MOVEMENT, (float)0},
+		{TASK_REMEMBER, (float)bits_MEMORY_INCOVER},
+		{TASK_TURN_LEFT, (float)179},
+};
+
+Schedule_t slGruntRunAwayFromBestSound[] =
+	{
+		{tlGruntRunAwayFromBestSound,
+			ARRAYSIZE(tlGruntRunAwayFromBestSound),
+			0,
+			0,
+			"GruntRunAwayFromBestSound"},
+};
+
 //=========================================================
 // Grunt reload schedule
 //=========================================================
@@ -1772,12 +1942,13 @@ Schedule_t slGruntRangeAttack2[] =
 //
 Task_t tlGruntThrowbackGrenade[] =
 	{
-		//{TASK_SET_FAIL_SCHEDULE, (float)SCHED_TAKE_COVER_FROM_ENEMY},
+		{TASK_SET_FAIL_SCHEDULE, (float)SCHED_COWER},
 		{TASK_STOP_MOVING, (float)0},
-		{TASK_GET_PATH_TO_ENEMY, (float)0},
+		{TASK_GRUNT_FIND_GRENADE, (float)0},
 		{TASK_RUN_PATH, (float)0},
 		{TASK_WAIT_FOR_MOVEMENT, (float)0},
-		{TASK_PLAY_SEQUENCE, (float)ACT_SPECIAL_ATTACK2},
+		{TASK_GRUNT_THROWBACK_GRENADE, (float)0},
+		{TASK_TURN_LEFT, (float)179},
 };
 
 Schedule_t slGruntThrowbackGrenade[] =
@@ -1785,8 +1956,27 @@ Schedule_t slGruntThrowbackGrenade[] =
 		{tlGruntThrowbackGrenade,
 			ARRAYSIZE(tlGruntThrowbackGrenade),
 		0,
-		bits_SOUND_DANGER,
-		"ThrowbackGrenade"},
+		0,
+		"GruntThrowBack"},
+};
+
+// PS2HLU
+// Bizarre GruntHideReload duplicate, only used
+// in when the aggressive spawnflag is checked
+Task_t tlGruntReload[] =
+	{
+		{TASK_STOP_MOVING, (float)0},
+		{TASK_SET_FAIL_SCHEDULE, (float)SCHED_RELOAD},
+		{TASK_FACE_ENEMY, (float)0},
+		{TASK_PLAY_SEQUENCE, (float)32}, // TODO: Do we have an enum or activity to substitute here?
+};
+
+Schedule_t slGruntReload[] = {
+	{tlGruntReload,
+		ARRAYSIZE(tlGruntReload),
+	0,
+	bits_SOUND_DANGER,
+	"GruntHideReload"},
 };
 
 
@@ -1880,6 +2070,7 @@ DEFINE_CUSTOM_SCHEDULES(CHGrunt){
 	slGruntGrenadeCover,
 	slGruntTossGrenadeCover,
 	slGruntTakeCoverFromBestSound,
+	slGruntRunAwayFromBestSound, // PS2HLU
 	slGruntHideReload,
 	slGruntSweep,
 	slGruntRangeAttack1A,
@@ -1888,7 +2079,8 @@ DEFINE_CUSTOM_SCHEDULES(CHGrunt){
 	slGruntRepel,
 	slGruntRepelAttack,
 	slGruntRepelLand,
-	slGruntThrowbackGrenade,
+	slGruntThrowbackGrenade, // PS2HLU
+	slGruntReload, // PS2HLU
 };
 
 IMPLEMENT_CUSTOM_SCHEDULES(CHGrunt, CSquadMonster);
@@ -1949,16 +2141,13 @@ void CHGrunt::SetActivity(Activity NewActivity)
 		// PS2HLU
 		// Return grenade attack
 	case ACT_SPECIAL_ATTACK2:
-		//ALERT(at_console, "hgrunt: Special attack 2 attempted!\n");
-		if (m_hEnemy == 0)
+		if (m_hHeldGrenade == 0)
 		{
-			// TODO:
-			// set a correct activity here
-			NewActivity = ACT_IDLE_ANGRY;
+			iSequence = LookupActivity(ACT_IDLE_ANGRY);
 			break;
 		}
 
-		if ((m_hEnemy->pev->dmgtime - gpGlobals->time) < 1.0f)
+		if ((m_hHeldGrenade->pev->dmgtime - gpGlobals->time) < 1.0f)
 			iSequence = LookupSequence("kick_grenade");
 		else
 			iSequence = LookupSequence("throwback_grenade");
@@ -2106,8 +2295,15 @@ Schedule_t* CHGrunt::GetSchedule()
 			{
 				MySquadLeader()->m_fEnemyEluded = false;
 
-				if (!IsLeader())
+				// PS2HLU
+				// Flee way less
+				if (!IsLeader() && RANDOM_LONG(0,4) == 0 &&
+						gpGlobals->time - m_fAggressionCooldown > 3.0f)
 				{
+					if (pev->spawnflags & 0x8000)
+						return GetScheduleOfType(SCHED_GRUNT_ESTABLISH_LINE_OF_FIRE);
+
+					m_fAggressionCooldown = gpGlobals->time;
 					return GetScheduleOfType(SCHED_TAKE_COVER_FROM_ENEMY);
 				}
 				else
@@ -2149,6 +2345,11 @@ Schedule_t* CHGrunt::GetSchedule()
 		// no ammo
 		else if (HasConditions(bits_COND_NO_AMMO_LOADED))
 		{
+			// PS2HLU
+			// Reload out in the open when aggression mode is active
+			if (pev->spawnflags & 0x8000)
+				return GetScheduleOfType(SCHED_GRUNT_RELOAD);
+
 			//!!!KELLY - this individual just realized he's out of bullet ammo.
 			// He's going to try to find cover to run to and reload, but rarely, if
 			// none is available, he'll drop and reload in the open here.
@@ -2163,7 +2364,8 @@ Schedule_t* CHGrunt::GetSchedule()
 			// 10% chance of flinch.
 			int iPercent = RANDOM_LONG(0, 99);
 
-			if (iPercent <= 90 && m_hEnemy != NULL)
+			if (iPercent <= 90 && m_hEnemy != NULL &&
+					3.0 < gpGlobals->time - m_fAggressionCooldown)
 			{
 				// only try to take cover if we actually have an enemy!
 
@@ -2174,6 +2376,12 @@ Schedule_t* CHGrunt::GetSchedule()
 					m_iSentence = HGRUNT_SENT_COVER;
 					//JustSpoke();
 				}
+					
+					// PS2HLU
+					if (pev->spawnflags & 0x8000)
+						return GetScheduleOfType(SCHED_GRUNT_ESTABLISH_LINE_OF_FIRE);
+
+				m_fAggressionCooldown = gpGlobals->time;
 				return GetScheduleOfType(SCHED_TAKE_COVER_FROM_ENEMY);
 			}
 			else
@@ -2205,6 +2413,29 @@ Schedule_t* CHGrunt::GetSchedule()
 				{
 					MySquadLeader()->m_fEnemyEluded = false;
 					return GetScheduleOfType(SCHED_GRUNT_FOUND_ENEMY);
+				}
+
+				// PS2HLU
+				if (OccupySlot(bits_SLOTS_HGRUNT_ENGAGE))
+				{
+					// try to take an available ENGAGE slot
+					return GetScheduleOfType(SCHED_RANGE_ATTACK1);
+				}
+				else if (HasConditions(bits_COND_CAN_RANGE_ATTACK2) && OccupySlot(bits_SLOTS_HGRUNT_GRENADE))
+				{
+					// throw a grenade if can and no engage slots are available
+					return GetScheduleOfType(SCHED_RANGE_ATTACK2);
+				}
+				// PS2HLU
+				// Extra aggression
+				else if (pev->spawnflags & 0x8000 || gpGlobals->time - m_fAggressionCooldown <= 3.0f)
+				{
+					return GetScheduleOfType(SCHED_GRUNT_ESTABLISH_LINE_OF_FIRE);
+				}
+				else
+				{
+					// hide!
+					return GetScheduleOfType(SCHED_TAKE_COVER_FROM_ENEMY);
 				}
 			}
 
@@ -2292,7 +2523,9 @@ Schedule_t* CHGrunt::GetScheduleOfType(int Type)
 					SENTENCEG_PlayRndSz(ENT(pev), "HG_THROW", HGRUNT_SENTENCE_VOLUME, GRUNT_ATTN, 0, m_voicePitch);
 					JustSpoke();
 				}
-				return slGruntTossGrenadeCover;
+				// PS2HLU
+				// Did HLSDK-Updated break this? Whatever the case, this is how it's in the PS2 version
+				return &slGruntTossGrenadeCover[0];
 			}
 			else
 			{
@@ -2301,7 +2534,10 @@ Schedule_t* CHGrunt::GetScheduleOfType(int Type)
 		}
 		else
 		{
-			if (RANDOM_LONG(0, 1))
+			// PS2HLU
+			// Always try to take regular cover instead of grenade cover
+			// when in co-op
+			if (gpGlobals->coop && RANDOM_LONG(0, 1))
 			{
 				return &slGruntTakeCover[0];
 			}
@@ -2327,13 +2563,25 @@ Schedule_t* CHGrunt::GetScheduleOfType(int Type)
 	break;
 	case SCHED_GRUNT_ELOF_FAIL:
 	{
+		// PS2HLU
+		// Don't move too often, only if we're aggressive
+		
 		// human grunt is unable to move to a position that allows him to attack the enemy.
+		if ((pev->spawnflags & 0x8000) == 0 &&
+				3.0f < gpGlobals->time - m_fAggressionCooldown)
 			return GetScheduleOfType(SCHED_TAKE_COVER_FROM_ENEMY);
+
+		return &slGruntWaitInCover[0];
 	}
 	break;
 	case SCHED_GRUNT_ESTABLISH_LINE_OF_FIRE:
 	{
-		return &slGruntEstablishLineOfFire[0];
+		// PS2HLU
+		// Allow forcing staying in cover (used on ht07signal and likely other maps)
+		if ((pev->spawnflags & 0x40000) == 0)
+			return &slGruntEstablishLineOfFire[0];
+
+		return &slGruntWaitInCover[0];
 	}
 	break;
 	case SCHED_RANGE_ATTACK1:
@@ -2422,44 +2670,17 @@ Schedule_t* CHGrunt::GetScheduleOfType(int Type)
 		return &slGruntRepelLand[0];
 	}
 	// PS2HLU
+	case SCHED_GRUNT_RELOAD:
+	{
+		return &slGruntReload[0];
+	}
+	case SCHED_GRUNT_RUN_AWAY_FROM_BEST_SOUND:
+	{
+		return &slGruntRunAwayFromBestSound[0];
+	}
 	case SCHED_GRUNT_THROWBACK_GRENADE:
 	{
-		//auto foundgrenade = UTIL_FindEntityByClassname(0, "grenade");
-		CBaseEntity* foundgrenade = NULL;
-
-		while ((foundgrenade = UTIL_FindEntityInSphere(foundgrenade, pev->origin, 192.0f)) != NULL)
-		{
-			if (FClassnameIs(foundgrenade->pev, "grenade"))
-			{
-				if (foundgrenade && !FNullEnt(foundgrenade) && 1.0f < (foundgrenade->pev->dmgtime - gpGlobals->time) /* && !HasConditions(bits_COND_RAN_FOR_GRENADE)*/)
-				{
-					// PS2 HL seemingly only checks one distance
-					// TODO: Should we check if were in a squad?
-					CBaseEntity* allies = NULL;
-					while ((allies = UTIL_FindEntityInSphere(allies, foundgrenade->pev->origin, 192.0f)) != NULL)
-					{
-						if (FClassnameIs(allies->pev, "monster_human_grunt"))
-						{
-							float allyDistance = (foundgrenade->pev->origin - allies->pev->origin).Length();
-							float selfDistance = (foundgrenade->pev->origin - pev->origin).Length();
-
-							// NOTE: This could lead to an edge case where both distances are equal
-							if (allyDistance < selfDistance)
-								return &slGruntTakeCoverFromBestSound[0];
-						}
-					}
-					// This was taken from CSquadMonster::SquadMakeEnemy
-					// do not forget that you were originally fighting the player
-					PushEnemy(m_hEnemy, m_vecEnemyLKP);
-					m_hEnemy = foundgrenade;
-					m_vecEnemyLKP = foundgrenade->pev->origin;
-
-					return &slGruntThrowbackGrenade[0];
-				}
-			}
-		}
-
-		return &slGruntTakeCoverFromBestSound[0];
+		return &slGruntThrowbackGrenade[0];
 	}
 	default:
 	{
@@ -2468,6 +2689,15 @@ Schedule_t* CHGrunt::GetScheduleOfType(int Type)
 	}
 }
 
+// PS2HLU
+// There's a mystery function here, I'm not sure which one it is yet,
+// all I know is that by process of elimination it must be responsible for
+// the behaviour of the grunts getting alerted to the player even if
+// notarget is on. This functionality is controlled by spawnflag 0x2000
+// and is likely meant to fix unresponsive AI when using the invisible cheat
+// due to a yet-to-be reversed AI optimization likely residing somewhere in
+// CBaseMonster::Look and maybe CBaseMonster::Listen or alternatively in
+// CSquadMonster
 
 //=========================================================
 // CHGruntRepel - when triggered, spawns a monster_human_grunt
