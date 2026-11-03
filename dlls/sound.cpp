@@ -152,7 +152,38 @@ TYPEDESCRIPTION CAmbientGeneric::m_SaveData[] =
 		DEFINE_ARRAY(CAmbientGeneric, m_dpv, FIELD_CHARACTER, sizeof(dynpitchvol_t)),
 };
 
-IMPLEMENT_SAVERESTORE(CAmbientGeneric, CBaseEntity);
+// PS2HLU
+//IMPLEMENT_SAVERESTORE(CAmbientGeneric, CBaseEntity);
+
+// same as macro
+bool CAmbientGeneric::Save(CSave& save)
+{
+	if (!CBaseEntity::Save(save))
+		return false;
+
+	return save.WriteFields("CAmbientGeneric", this, m_SaveData, ARRAYSIZE(m_SaveData));
+}
+
+bool CAmbientGeneric::Restore(CRestore& restore)
+{
+	if (!CBaseEntity::Restore(restore))
+		return false;
+
+	// PS2HLU
+	// hack to fixup looping sounds on restore
+	bool bIsLooping = ((pev->spawnflags & 32) == 0); /*&& g_pGameRules->IsMultiplayer()*/
+	bool savedState = m_fActive;
+
+	bool status = restore.ReadFields("CAmbientGeneric", this, m_SaveData, ARRAYSIZE(m_SaveData));
+
+	if (bIsLooping && savedState != m_fActive)
+	{
+		m_fActive = savedState;
+		ToggleUse(nullptr, nullptr, USE_TOGGLE, 1.0f);
+	}
+
+	return status;
+}
 
 //
 // ambient_generic - general-purpose user-defined static sound
