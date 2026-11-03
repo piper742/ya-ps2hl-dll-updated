@@ -20,6 +20,7 @@
 #include "cl_util.h"
 #include "parsemsg.h"
 #include "r_efx.h"
+#include "event_api.h"
 
 #include "particleman.h"
 extern IParticleMan* g_pParticleMan;
@@ -171,4 +172,49 @@ bool CHud::MsgFunc_HudColor(const char* pszName, int iSize, void* pbuf)
 	gHUD.HudColor = ((READ_BYTE() & 0xFF) << 16) + ((READ_BYTE() & 0xFF) << 8) + (READ_BYTE() & 0xFF);
 
 	return 1;
+}
+
+// !!! Update when number of decals changes!!!
+constexpr int NUM_DECALS = 41;
+
+bool CHud::MsgFunc_PCHTRestore(const char* pszName, int iSize, void* pbuf)
+{
+	//gEngfuncs.Con_Printf("Client recieved PC HT Restore message!!!\n");
+
+	int i = 0;
+	while (true)
+	{
+		i++; // start AFTER worldspawn
+
+		cl_entity_t* pEnt = gEngfuncs.GetEntityByIndex(i);
+
+		// TODO: Does this work with empty player slots in multiplayer?
+		if (pEnt == nullptr)
+			break;
+
+		// Skip sounds with no model origin, as they're
+		// ambient_generics and looping ones can't quite
+		// easily get restored.
+		if (pEnt->model == 0)
+			continue;
+
+		// stop all sounds
+		// exclude CHAN_AUTO, networked voice & CHAN_BOT
+		for (int j = 1; j < 7; j++)
+		{
+			gEngfuncs.pEventAPI->EV_StopAllSounds(i, j);
+		}
+	}
+
+	// Only removes client side decals (?).
+	// Server-side ones (eg. infodecal) stays behind, this only
+	// becomes a problem on maps that use trigger-able decals, but
+	// there's nothing that can be done about that.
+	// TODO: consider creating a decal tracker for client-side decals
+	for (int j = 0; j < NUM_DECALS; j++)
+		gEngfuncs.pEfxAPI->R_DecalRemoveAll(j); // really just an index into decal list
+		//gEngfuncs.pEfxAPI->R_DecalRemoveAll(gEngfuncs.pEfxAPI->Draw_DecalIndex(j));
+
+
+	return true;
 }

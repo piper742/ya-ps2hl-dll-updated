@@ -429,6 +429,9 @@
     <ClCompile Include="..\..\dlls\ps2hlu_button_toggle_indicator.cpp">
       <Filter>Source Files\dlls</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\dlls\ps2hlu_pc_savesystem.cpp">
+      <Filter>Source Files\dlls</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\dlls\doors.h">
@@ -720,6 +723,9 @@
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
     <ClInclude Include="..\..\dlls\ps2hlu_useable_graphic.h">
+      <Filter>Header Files\dlls</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\dlls\ps2hlu_pc_savesystem.h">
       <Filter>Header Files\dlls</Filter>
     </ClInclude>
   </ItemGroup>

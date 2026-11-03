@@ -225,6 +225,14 @@ void CBaseMonster::Listen()
 	{
 		pCurrentSound = CSoundEnt::SoundPointerForIndex(iSound);
 
+		// PS2HLU
+		// safety net in case our savesystem messes this up
+		if (pCurrentSound == nullptr)
+		{
+			iSound = SOUNDLIST_EMPTY;
+			break;
+		}
+
 		if (nullptr != pCurrentSound &&
 			(pCurrentSound->m_iType & iMySounds) != 0 &&
 			(pCurrentSound->m_vecOrigin - EarPosition()).Length() <= pCurrentSound->m_iVolume * hearingSensitivity)
@@ -265,7 +273,15 @@ void CBaseMonster::Listen()
 		}
 
 		//		iSound = g_pSoundEnt->m_SoundPool[ iSound ].m_iNext;
-		iSound = pCurrentSound->m_iNext;
+
+		// PS2HLU
+		// Whoops looks like valve forgot this case
+		if (pCurrentSound != nullptr)
+		{
+			iSound = pCurrentSound->m_iNext;
+			if (pCurrentSound->m_iNext == 0)
+				break;
+		}
 	}
 }
 

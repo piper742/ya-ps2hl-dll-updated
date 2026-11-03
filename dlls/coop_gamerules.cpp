@@ -10,6 +10,8 @@
 #include	"voice_gamemgr.h"
 #include	"hltv.h"
 #include	"gamerules.h"
+#include "shake.h"
+#include "UserMessages.h"
 
 extern DLL_GLOBAL CGameRules	*g_pGameRules;
 extern DLL_GLOBAL bool	g_fGameOver;
@@ -27,6 +29,8 @@ extern int gmsgHudColor;
 CHalfLifeCoop::CHalfLifeCoop()
 {
 	//g_VoiceGameMgr.Init(&g_GameMgrHelper, gpGlobals->maxClients);
+	
+	m_SaveState = SaveState::NONE;
 
 	RefreshSkillData();
 	// 11/8/98
@@ -70,8 +74,20 @@ CHalfLifeCoop::CHalfLifeCoop()
 
 bool CHalfLifeCoop::ClientCommand(CBasePlayer *pPlayer, const char *pcmd)
 {
+	// PS2HLU
+	// checkpoint system
+	if (FStrEq(pcmd, "checkpoint"))
+	{
+		m_SaveState = SaveState::SAVING;
+		return true;
+	}
 
-	return CGameRules::ClientCommand(pPlayer, pcmd);
+	if (FStrEq(pcmd, "restore"))
+	{
+		m_SaveState = SaveState::LOADING;
+		return true;
+	}
+	else return CGameRules::ClientCommand(pPlayer, pcmd);
 }
 
 //=========================================================
@@ -154,6 +170,44 @@ void CHalfLifeCoop::Think(void)
 
 	int frags_remaining = 0;
 	int time_remaining = 0;
+
+	// PS2HLU
+	// Checkpoint system
+	// Has to be here since gamerules is the first thing that
+	// executes in StartFrame, and we're invalidating a LOT of data during a restore
+	// so that we'll have it fixed up before any code actually using it executes
+	if (m_SaveState == SaveState::SAVING)
+		m_SaveSystem.Save();
+	else if (m_SaveState == SaveState::LOADING)
+	{
+		// clear any remaining trigger_enddecay/gameover FX, and show
+		// a pleasant fade-in effect.
+		// TODO: Give players god mode for 1-2 seconds after the restore
+		UTIL_ScreenFadeAll(Vector(0,0,0), 1.0f, 0.0f, 255, FFADE_IN);
+		UTIL_ShowMessageAll("");
+
+		// handle players
+		for (int i = 1; i <= gpGlobals->maxClients; i++)
+		{
+			CBaseEntity* pPlayer = UTIL_PlayerByIndex(i);
+
+			if (pPlayer == 0)
+				break;
+
+			MESSAGE_BEGIN(MSG_ONE, gmsgPCHTRestore, NULL, &(INDEXENT(i)->v));
+			WRITE_BYTE(0);
+			MESSAGE_END();
+		}
+
+		m_SaveSystem.Restore();
+
+		// TODO: Send weapon update to clients
+
+		// fixup gamerules
+		g_pGameRules = this;
+	}
+	m_SaveState = SaveState::NONE;
+
 
 	if (g_fGameOver)   // someone else quit the game already
 	{
@@ -1032,12 +1086,7 @@ bool CHalfLifeCoop::IsAllowedToSpawn(CBaseEntity *pEntity)
 //=========================================================
 int CHalfLifeCoop::AmmoShouldRespawn(CBasePlayerAmmo *pAmmo)
 {
-	if (pAmmo->pev->spawnflags & SF_NORESPAWN)
-	{
 		return GR_AMMO_RESPAWN_NO;
-	}
-
-	return GR_AMMO_RESPAWN_YES;
 }
 
 //=========================================================

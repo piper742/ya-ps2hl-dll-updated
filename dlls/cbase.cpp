@@ -431,6 +431,9 @@ int DispatchRestore(edict_t* pent, SAVERESTOREDATA* pSaveData, int globalEntity)
 			}
 		}
 	}
+	else
+		ALERT(at_console, "Invalid save/restore data!\n");
+
 	return 0;
 }
 

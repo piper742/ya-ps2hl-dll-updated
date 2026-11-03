@@ -25,6 +25,8 @@ class CBasePlayer;
 class CItem;
 class CBasePlayerAmmo;
 
+#include "ps2hlu_pc_savesystem.h"
+
 // weapon respawning return codes
 enum
 {
@@ -472,6 +474,8 @@ protected:
 	float m_flIntermissionEndTime;
 	bool m_iEndIntermissionButtonHit;
 	void SendMOTDToClient(edict_t* client);
+	SaveState m_SaveState; // state of saving
+	CSaveSystem m_SaveSystem;
 };
 
 //=========================================================

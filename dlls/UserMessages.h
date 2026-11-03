@@ -64,5 +64,6 @@ inline int gmsgLockOffs = 0;	  // HUD lock offset
 inline int gmsgExtremeFunnel = 0; // Big sprite funnel & burst effect
 inline int gmsgTankUse = 0;
 inline int gmsgTankAmmo = 0;
+inline int gmsgPCHTRestore = 0;
 
 void LinkUserMessages();

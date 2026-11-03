@@ -487,6 +487,11 @@ int __MsgFunc_HudColor(const char* pszName, int iSize, void* pbuf)
 	return static_cast<int>(gHUD.MsgFunc_HudColor(pszName, iSize, pbuf));
 }
 
+int __MsgFunc_PCHTRestore(const char* pszName, int iSize, void* pbuf)
+{
+	return static_cast<int>(gHUD.MsgFunc_PCHTRestore(pszName, iSize, pbuf));
+}
+
 // This is called every time the DLL is loaded
 void CHud::Init()
 {
@@ -534,6 +539,7 @@ void CHud::Init()
 	//HOOK_MESSAGE( Accuracy );
 	HOOK_MESSAGE(BigFunnel);
 	HOOK_MESSAGE(HudColor);
+	HOOK_MESSAGE(PCHTRestore);
 
 	HOOK_MESSAGE(Spectator);
 	HOOK_MESSAGE(AllowSpec);

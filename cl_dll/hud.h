@@ -713,6 +713,7 @@ public:
 
 	// PS2HLU
 	bool MsgFunc_HudColor(const char* pszName, int iSize, void* pbuf);
+	bool MsgFunc_PCHTRestore(const char* pszName, int iSize, void* pbuf);
 
 	// Screen information
 	SCREENINFO m_scrinfo;
