@@ -199,9 +199,13 @@ bool CHud::MsgFunc_PCHTRestore(const char* pszName, int iSize, void* pbuf)
 			continue;
 
 		// stop all sounds
-		// exclude CHAN_AUTO, networked voice & CHAN_BOT
+		// exclude CHAN_AUTO, CHAN_STREAM, networked voice & CHAN_BOT
 		for (int j = 1; j < 7; j++)
 		{
+			// skip CHAN_STREAM
+			if (j == 5)
+				continue;
+
 			gEngfuncs.pEventAPI->EV_StopAllSounds(i, j);
 		}
 	}
