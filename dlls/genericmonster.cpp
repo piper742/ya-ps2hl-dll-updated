@@ -191,6 +191,17 @@ void CGenericMonster::Spawn()
 	m_flFieldOfView = 0.5; // indicates the width of this monster's forward view cone ( as a dotproduct result )
 	m_MonsterState = MONSTERSTATE_NONE;
 
+	// PS2HLU
+	// Ugly hack to fix bodygroups when used on scientists/barneys
+	// TODO: Should we check the set pev->model?
+	if (pev->body != -1 && pev->body >= 0 && pev->body <= 4)
+	{
+		const int bodyval = pev->body;
+
+		pev->body = 0;
+		SetBodygroup(1, bodyval);
+	}
+
 	// PS2HL
 	if (pev->health == 0)
 		pev->health = 8;
