@@ -22,7 +22,7 @@
 #include "util.h"
 #include "cbase.h"
 #include "doors.h"
-
+#include "gamerules.h"
 
 extern void SetMovedir(entvars_t* ev);
 
@@ -74,8 +74,6 @@ public:
 	byte m_bLockedSentence;
 	byte m_bUnlockedSound;
 	byte m_bUnlockedSentence;
-
-	CBaseEntity *prevActivator = NULL; //PS2HLU
 };
 
 
@@ -541,12 +539,16 @@ void CBaseDoor::DoorTouch(CBaseEntity* pOther)
 
 	if (!FStringNull(pev->targetname))
 	{
+		// PS2HLU
+		// I feel like pev->flags has gotta be a typo here
+		if ((g_pGameRules->IsCoOp() == 0 || pev->flags & FL_IMMUNE_WATER) &&
+				m_sMaster != 0)
+			return;
+
 		// play locked sound
 		PlayLockSounds(pev, &m_ls, true, false);
 		return;
 	}
-	
-	m_hActivator = pOther;// remember who activated the door
 
 	m_hActivator = pOther; // remember who activated the door
 
@@ -561,17 +563,21 @@ void CBaseDoor::DoorTouch(CBaseEntity* pOther)
 void CBaseDoor::Use(CBaseEntity* pActivator, CBaseEntity* pCaller, USE_TYPE useType, float value)
 {
 	// PS2HLU
-	// Ignore previous door activator
-	if (pev->spawnflags & 65536 && FClassnameIs(pev, "func_door") )
+	// Spawnflag 65536, respect door state in regards to useType
+	// BUG BUG BUG m_hActivator doesn't get set if this branch runs!
+	if (pev->spawnflags & 0x10000 && useType <= USE_ON)
 	{
-		//ALERT(at_console, "Door was activated by: %d", pActivator);
-		if (prevActivator == pActivator)
+		if (useType == USE_ON && m_toggle_state != TS_AT_BOTTOM)
 			return;
+		if (useType == USE_OFF && m_toggle_state != TS_AT_TOP)
+			return;
+
+		DoorActivate();
+		return;
 	}
 
-	prevActivator = pActivator;
-
 	m_hActivator = pActivator;
+
 	// if not ready to be used, ignore "use" command.
 	if (m_toggle_state == TS_AT_BOTTOM || FBitSet(pev->spawnflags, SF_DOOR_NO_AUTO_RETURN) && m_toggle_state == TS_AT_TOP)
 		DoorActivate();
