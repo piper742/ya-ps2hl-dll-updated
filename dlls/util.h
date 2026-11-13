@@ -604,3 +604,15 @@ struct CallOnDestroy
 		Function();
 	}
 };
+
+#include "ps2hlu_pc_lighttracker.h"
+
+// PS2HLU
+// Light style tracker hook
+inline void LIGHT_STYLE(int style, const char *val)
+{
+	if (pLightTracker)
+		pLightTracker->SetLightStyle(style, val);
+
+	LIGHT_STYLE_ENGINE(style, val);
+}

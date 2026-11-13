@@ -19,7 +19,6 @@
  * sv_game.c from: https://github.com/FWGS/xash3d-fwgs/blob/3e24d5a347a4f0417292cbc75ee4a628f2091f6c/engine/server/sv_game.c
  *************************/
 
-// TODO: LIGHT_STYLE tracker to fix big visual bugs
 // TODO: Decal tracker if I have the time, for players who join the session after
 // infodecal's have sent their messages.
 
@@ -56,7 +55,7 @@ public:
 
 		void Save();
 		void Restore();
-	
+
 private:
 		void ResetMem();
 		void ResetPtr();

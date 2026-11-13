@@ -58,7 +58,7 @@ inline enginefuncs_t g_engfuncs;
 #define SERVER_EXECUTE (*g_engfuncs.pfnServerExecute)
 #define CLIENT_COMMAND (*g_engfuncs.pfnClientCommand)
 #define PARTICLE_EFFECT (*g_engfuncs.pfnParticleEffect)
-#define LIGHT_STYLE (*g_engfuncs.pfnLightStyle)
+#define LIGHT_STYLE_ENGINE (*g_engfuncs.pfnLightStyle)
 #define DECAL_INDEX (*g_engfuncs.pfnDecalIndex)
 #define POINT_CONTENTS (*g_engfuncs.pfnPointContents)
 #define CRC32_INIT (*g_engfuncs.pfnCRC32_Init)

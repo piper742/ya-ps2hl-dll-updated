@@ -1,4 +1,5 @@
 #include "ps2hlu_pc_savesystem.h"
+#include "ps2hlu_pc_lighttracker.h"
 #include <stdlib.h>
 #include "effects.h"
 
@@ -114,7 +115,7 @@ void CSaveSystem::WriteHeader()
 	m_SaveHeader.connectionCount = 0;
 	m_SaveHeader.skillLevel = 1; // TODO: Save!!!
 	m_SaveHeader.entityCount = m_SaveRestoreData->tableCount;
-	m_SaveHeader.lightStyleCount = 0; // TODO
+	m_SaveHeader.lightStyleCount = 0; // useless since we've got a seperate light tracker
 	m_SaveRestoreData->time = 0.0f;
 	SaveWriteFields(m_SaveRestoreData, "Save Header", &m_SaveHeader, saveHeader, ARRAYSIZE(saveHeader));
 	m_SaveRestoreData->time = m_SaveHeader.time;
@@ -153,6 +154,10 @@ void CSaveSystem::Save()
 		pTemp->pent = INDEXENT(i);
 		pTemp->id = i;
 	}
+
+	// Save current light styles
+	if (pLightTracker)
+		pLightTracker->Save();
 
 	// write save header in memory
 	WriteHeader();
@@ -254,6 +259,10 @@ void CSaveSystem::Restore()
 	// HACK!!! Lie that we used a landmark so that the player's
 	// position doesn't get reset
 	m_SaveRestoreData->fUseLandmark = 1;
+
+	// Restore saved light styles
+	if (pLightTracker)
+		pLightTracker->Restore();
 
 	ResetGlobalState();
 	ReadHeader();

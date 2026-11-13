@@ -33,6 +33,7 @@
 #include "weapons.h"
 #include "gamerules.h"
 #include "teamplay_gamerules.h"
+#include "ps2hlu_pc_lighttracker.h"
 
 CGlobalState gGlobalState;
 
@@ -539,6 +540,17 @@ void CWorld::Precache()
 	{
 		ALERT(at_console, "**COULD NOT CREATE SOUNDENT**\n");
 	}
+
+	// PS2HLU
+	// Per world light style tracking
+	// This is a pretty ugly thing and we're leaking memory
+	// but it's fine for now
+	// TODO: Consider using unique_ptr? Would that deallocate it
+	// during shutdown or no?
+	if (pLightTracker == nullptr)
+		pLightTracker = new CLightTracker;
+	else
+		pLightTracker->Reset();
 
 	InitBodyQue();
 
